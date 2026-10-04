@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3@0.1",
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "api/index" },
+    { "src": "/(.*)", "dest": "api/index" }
+  ],
+  "env": {
+    "MALWARELENS_UPLOAD_DIR": "/tmp/uploads",
+    "MALWARELENS_REPORT_DIR": "/tmp/reports",
+    "MALWARELENS_DB": "/tmp/reports/malwarelens.db"
+  }
+}

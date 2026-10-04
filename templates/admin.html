@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <section class="card">
+                <h2>⚙️ Admin Panel</h2>
+                <p class="subtitle">Site operations &amp; account management · signed in as {{ user.username }}</p>
+            </section>
+
+            <section class="stats-grid dashboard-stats">
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.users }}</span>
+                    <span class="stat-label">Users</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.admins }}</span>
+                    <span class="stat-label">Admins</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.reports }}</span>
+                    <span class="stat-label">Reports Stored</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.communities }}</span>
+                    <span class="stat-label">Communities</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.open_tickets }}</span>
+                    <span class="stat-label">Open Tickets</span>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>👥 Users</h2>
+                {% if users %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Joined</th>
+                                <th>Role</th>
+                                <th>Comms</th>
+                                <th>Tickets</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users %}
+                            <tr>
+                                <td class="mono">@{{ u.username }}</td>
+                                <td class="muted">{{ u.email }}</td>
+                                <td class="muted">{{ u.created_at[:10] }}</td>
+                                <td>
+                                    {% if u.is_admin %}
+                                    <span class="admin-badge">Admin</span>
+                                    {% else %}
+                                    <span class="muted">Member</span>
+                                    {% endif %}
+                                </td>
+                                <td class="muted">{{ u.communities_owned }} / {{ u.memberships }}</td>
+                                <td class="muted">{{ u.tickets }}</td>
+                                <td class="admin-actions">
+                                    {% if u.id != user.id %}
+                                    <form method="post" action="{{ url_for('admin_set_admin', user_id=u.id) }}">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm {{ 'btn-secondary' if u.is_admin else 'btn-primary' }}">
+                                            {{ 'Revoke Admin' if u.is_admin else 'Make Admin' }}
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('admin_reset_password', user_id=u.id) }}" class="admin-pass-form">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <input type="text" name="new_password" class="admin-pass-input" placeholder="new password" minlength="8" required aria-label="New password for @{{ u.username }}">
+                                        <button type="submit" class="btn btn-sm btn-secondary" title="Reset password">Reset pw</button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                                          onsubmit="return confirm('Delete @{{ u.username }} and ALL their data? This cannot be undone.');">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                    {% else %}
+                                    <span class="muted">You</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="no-data">No users registered yet.</p>
+                {% endif %}
+            </section>
+
+            <section class="card">
+                <h2>🕐 Recent Reports</h2>
+                {% if reports %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Owner</th>
+                                <th>Risk</th>
+                                <th>Analyzed</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in reports %}
+                            <tr>
+                                <td class="mono">{{ entry.filename }}</td>
+                                <td class="muted">{{ owner_names[entry.owner_id] if entry.owner_id in owner_names else '—' }}</td>
+                                <td>
+                                    <span class="risk-pill risk-pill-{{ entry.risk_color }}">
+                                        {{ entry.risk_score }} · {{ entry.risk_level }}
+                                    </span>
+                                </td>
+                                <td class="muted">{{ entry.analyzed_at_iso }}</td>
+                                <td class="admin-actions">
+                                    <form method="post" action="{{ url_for('admin_delete_report', report_id=entry.report_id) }}"
+                                          onsubmit="return confirm('Delete this report permanently?');">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="no-data">No reports stored yet.</p>
+                {% endif %}
+            </section>
+
+            <section class="card">
+                <h2>🎫 Support Tickets</h2>
+                {% if tickets %}
+                <ul class="ticket-list">
+                    {% for t in tickets %}
+                    <li class="ticket-item">
+                        <div class="ticket-head">
+                            <span class="ticket-subject">{{ t.subject }}</span>
+                            <span class="ticket-status {{ 'ticket-open' if t.status == 'open' else 'ticket-closed' }}">
+                                {{ t.status }}
+                            </span>
+                        </div>
+                        <p class="ticket-meta">
+                            {% if t.username %}@{{ t.username }} · {% endif %}{{ t.email }} · {{ t.created_at[:16] }}
+                        </p>
+                        <p class="ticket-msg">{{ t.message }}</p>
+                        <form method="post" action="{{ url_for('admin_ticket_toggle', ticket_id=t.id) }}">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-sm">
+                                {{ 'Mark closed' if t.status == 'open' else 'Reopen' }}
+                            </button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                    <p class="no-data">No support tickets yet.</p>
+                {% endif %}
+            </section>
+        <section class="card">
+                <h2>📧 Email / SMTP</h2>
+                <p class="ticket-meta">
+                    Sends a real test message and shows the exact result (including
+                    the SMTP server error) so you can verify verification/reset emails deliver.
+                </p>
+                <form method="post" action="{{ url_for('admin_test_email') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <div class="password-row">
+                        <input type="email" name="email" placeholder="you@yourdomain.com"
+                               required class="form-input">
+                        <button type="submit" class="btn">Send test email</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

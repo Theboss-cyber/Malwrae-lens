@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Sandbox | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <section class="card">
+                <h2>🏘️ Cloud Sandbox <span class="phase-badge">Phase 6</span></h2>
+                <p class="subtitle">
+                    Shared offline communities for team triage of analysis verdicts — no external cloud required.
+                </p>
+
+                <form method="post" action="{{ url_for('sandbox_create') }}" class="settings-form" style="max-width:520px; margin-top:18px">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <label class="form-label" for="cname">Create a community</label>
+                    <input class="form-input" type="text" id="cname" name="name" maxlength="40" minlength="3" placeholder="e.g. National CERT - Red Team" required>
+                    <textarea class="form-input" name="description" rows="2" maxlength="200" placeholder="What does your team triage?"></textarea>
+                    <button type="submit" class="btn btn-primary">➕ Create Community</button>
+                </form>
+            </section>
+
+            {% if mine %}
+            <section class="card">
+                <h2>🔖 My Communities</h2>
+                <div class="community-grid">
+                    {% for c in mine %}
+                    <div class="community-card">
+                        <h3>{{ c.name }}</h3>
+                        <p class="muted small">{{ (c.description or 'No description yet.') }}</p>
+                        <p class="small">👥 {{ c.member_count }} member{{ 's' if c.member_count != 1 }} · by <strong>{{ c.owner_name }}</strong></p>
+                        <a href="{{ url_for('sandbox_detail', slug=c.slug) }}" class="btn btn-secondary btn-sm">Open →</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="card">
+                <h2>🌍 All Communities</h2>
+                {% if communities %}
+                <div class="community-grid">
+                    {% for c in communities %}
+                    <div class="community-card">
+                        <h3>{{ c.name }}</h3>
+                        <p class="muted small">{{ (c.description or 'No description yet.') }}</p>
+                        <p class="small">👥 {{ c.member_count }} member{{ 's' if c.member_count != 1 }} · by <strong>{{ c.owner_name }}</strong></p>
+                        <a href="{{ url_for('sandbox_detail', slug=c.slug) }}" class="btn btn-secondary btn-sm">View →</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-data">No communities yet — create the first one for your team.</p>
+                {% endif %}
+            </section>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

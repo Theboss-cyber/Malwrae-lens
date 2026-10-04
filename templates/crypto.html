@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Encryption Tool | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main" id="main-content">
+            <div class="upload-card crypto-card">
+                <h2>🔐 File Encryption / Decryption</h2>
+                <p class="subtitle">Encrypt files with AES-256-GCM or decrypt files encrypted by this tool</p>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="encrypt" id="tabEncrypt">Encrypt File</button>
+                    <button class="tab-btn" data-tab="decrypt" id="tabDecrypt">Decrypt File</button>
+                </div>
+
+                <form action="{{ url_for('crypto') }}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="action" id="actionField" value="encrypt">
+
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-content">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <p id="dropText">Drag &amp; drop a file here</p>
+                            <p class="small">or</p>
+                            <button type="button" class="btn btn-secondary" id="browseBtn">Browse Files</button>
+                            <input type="file" name="file" id="fileInput" hidden>
+                            <p class="selected-file" id="selectedFile"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="password-row">
+                            <input type="password" name="password" id="password" class="text-input"
+                                   placeholder="Enter a strong password" autocomplete="new-password">
+                            <button type="button" class="btn btn-secondary btn-sm" id="togglePass">👁</button>
+                        </div>
+                        <div class="strength-bar" id="strengthBar">
+                            <div class="strength-fill" id="strengthFill"></div>
+                        </div>
+                        <span class="strength-label" id="strengthLabel">Strength: —</span>
+                    </div>
+
+                    <div class="form-group" id="confirmGroup">
+                        <label for="confirm">Confirm Password</label>
+                        <input type="password" name="confirm" id="confirm" class="text-input"
+                               placeholder="Re-enter password" autocomplete="new-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full" id="submitBtn">
+                        🔒 Encrypt File
+                    </button>
+                </form>
+            </div>
+
+            <div class="info-card">
+                <h2>How It Works</h2>
+                <div class="info-section">
+                    <h3>Encryption</h3>
+                    <ul>
+                        <li><strong>AES-256-GCM</strong> — industry standard authenticated encryption</li>
+                        <li><strong>PBKDF2</strong> — 300,000 iterations of HMAC-SHA256 key derivation</li>
+                        <li><strong>Random salt + nonce</strong> — every file encrypts uniquely</li>
+                        <li><strong>Authentication tag</strong> — tampering is detected</li>
+                        <li><strong>Streaming</strong> — handles files of any size</li>
+                    </ul>
+                </div>
+                <div class="info-section">
+                    <h3>Strong Password Tips</h3>
+                    <ul>
+                        <li>At least 12 characters</li>
+                        <li>Mix upper, lower, numbers, symbols</li>
+                        <li>Never reuse passwords</li>
+                        <li>A lost password = unrecoverable data</li>
+                    </ul>
+                </div>
+                <div class="info-section">
+                    <h3>Decryption</h3>
+                    <ul>
+                        <li>Only files encrypted by this tool ('.mlenc') are supported</li>
+                        <li>Wrong passwords are detected and rejected</li>
+                        <li>The GCM tag verifies integrity and authenticity</li>
+                    </ul>
+                </div>
+                <div class="warning">
+                    <strong>⚠️ Security:</strong> Files are processed on this server and deleted
+                    after download. Upload only files you trust with the server operator.
+                </div>
+            </div>
+
+            {% if result %}
+            <div class="card result-card">
+                <h2>{{ result.title }}</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Input File</span>
+                        <span class="info-value">{{ result.input_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Output File</span>
+                        <span class="info-value">{{ result.output_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">
+                            {% if result.action == 'encrypt' %}Original Size{% else %}Decrypted Size{% endif %}
+                        </span>
+                        <span class="info-value">{{ '{:,}'.format(result.original_size) }} bytes</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">
+                            {% if result.action == 'encrypt' %}Encrypted Size{% else %}Output Size{% endif %}
+                        </span>
+                        <span class="info-value">{{ '{:,}'.format(result.output_size) }} bytes</span>
+                    </div>
+                    {% if result.iterations %}
+                    <div class="info-item">
+                        <span class="info-label">KDF Iterations</span>
+                        <span class="info-value">{{ '{:,}'.format(result.iterations) }} (PBKDF2-SHA256)</span>
+                    </div>
+                    {% endif %}
+                    {% if result.salt %}
+                    <div class="info-item">
+                        <span class="info-label">Salt</span>
+                        <span class="info-value code-value">{{ result.salt }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Nonce</span>
+                        <span class="info-value code-value">{{ result.nonce }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Auth Tag</span>
+                        <span class="info-value code-value">{{ result.tag }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <p class="result-message">{{ result.message }}</p>
+
+                <div class="actions">
+                    <a href="{{ url_for('download', filename=result.output_name) }}" class="btn btn-primary">
+                        ⬇️ Download {{ 'Encrypted' if result.action == 'encrypt' else 'Decrypted' }} File
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        </div>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const actionField = document.getElementById('actionField');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const selectedFile = document.getElementById('selectedFile');
+        const submitBtn = document.getElementById('submitBtn');
+        const confirmGroup = document.getElementById('confirmGroup');
+        const dropText = document.getElementById('dropText');
+        const password = document.getElementById('password');
+        const strengthFill = document.getElementById('strengthFill');
+        const strengthLabel = document.getElementById('strengthLabel');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const mode = tab.dataset.tab;
+                actionField.value = mode;
+                if (mode === 'encrypt') {
+                    submitBtn.textContent = '🔒 Encrypt File';
+                    confirmGroup.style.display = '';
+                    dropText.textContent = 'Drag & drop a file to encrypt';
+                } else {
+                    submitBtn.textContent = '🔓 Decrypt File';
+                    confirmGroup.style.display = 'none';
+                    dropText.textContent = 'Drag & drop a .mlenc file to decrypt';
+                }
+            });
+        });
+
+        browseBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) updateSelectedFile(e.target.files[0]);
+        });
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                updateSelectedFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function updateSelectedFile(file) {
+            selectedFile.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+            dropZone.classList.add('has-file');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Password strength meter
+        password.addEventListener('input', () => {
+            const val = password.value;
+            let score = 0;
+            if (val.length >= 8) score += 1;
+            if (val.length >= 12) score += 1;
+            if (/[A-Z]/.test(val)) score += 1;
+            if (/[a-z]/.test(val)) score += 1;
+            if (/\d/.test(val)) score += 1;
+            if (/[^A-Za-z0-9]/.test(val)) score += 1;
+
+            const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'];
+            const colors = ['#e74c3c', '#e74c3c', '#e67e22', '#e67e22', '#25a244', '#25a244'];
+            strengthFill.style.width = (score / 6 * 100) + '%';
+            strengthFill.style.backgroundColor = colors[score];
+            strengthLabel.textContent = 'Strength: ' + labels[score];
+        });
+
+        // Toggle password visibility
+        const togglePass = document.getElementById('togglePass');
+        togglePass.addEventListener('click', () => {
+            const type = password.type === 'password' ? 'text' : 'password';
+            password.type = type;
+            const confirm = document.getElementById('confirm');
+            if (confirm) confirm.type = type;
+        });
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

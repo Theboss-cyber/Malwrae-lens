@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main results-grid" id="main-content">
+            <div class="report-toolbar">
+                <span class="toolbar-note">View / export this analysis:</span>
+                <div class="report-actions">
+                    <a href="{{ url_for('report', report_id=report_id) }}" class="btn btn-secondary btn-sm">📄 Full Report</a>
+                    <a href="{{ url_for('download_report_html', report_id=report_id) }}" class="btn btn-secondary btn-sm">⬇️ HTML</a>
+                    <a href="{{ url_for('download_report_json', report_id=report_id) }}" class="btn btn-secondary btn-sm">⬇️ JSON</a>
+                </div>
+            </div>
+
+            <!-- Risk Score Banner -->
+            <section class="risk-banner risk-{{ results.risk.color }}">
+                <div class="risk-score">
+                    <div class="score-ring" style="--score: {{ results.risk.score }}%;">
+                        <span class="score-number">{{ results.risk.score }}/100</span>
+                    </div>
+                    <div class="risk-text">
+                        <h2>{{ results.risk.level }}</h2>
+                        <p>Risk assessment indicates potential threat level</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VirusTotal -->
+            <section class="card">
+                <h2>🌐 VirusTotal Threat Intelligence</h2>
+                {% if not vt_enabled %}
+                    <p class="no-data">
+                        ⚠️ {{ results.virustotal.message or 'VirusTotal not configured. Set VT_API_KEY environment variable or create config.json.' }}
+                    </p>
+                {% elif results.virustotal.file and results.virustotal.file.found %}
+                    {% set vt = results.virustotal.file %}
+                    <div class="vt-summary">
+                        <div class="vt-dets {{ 'vt-det-clean' if vt.detections == 0 else 'vt-det-susp' if vt.detections < 3 else 'vt-det-mal' }}">
+                            <span class="vt-dets-num">{{ vt.detections }}</span>
+                            <span class="vt-dets-label">/ {{ vt.total_engines }} engines detect<br>this sample</span>
+                        </div>
+                        <div class="vt-details">
+                            <div class="vt-tag-row">
+                                {% if vt.reputation is not none %}
+                                <span class="vt-chip">Reputation: {{ vt.reputation }}</span>
+                                {% endif %}
+                                {% if vt.tags %}
+                                    <span class="vt-chip">Tags: {{ vt.tags | join(', ') }}</span>
+                                {% endif %}
+                                {% if vt.meaningful_name %}
+                                    <span class="vt-chip">Known as: {{ vt.meaningful_name }}</span>
+                                {% endif %}
+                            </div>
+                            <p class="vt-note">
+                                <a href="https://www.virustotal.com/gui/file/{{ results.hashes.sha256 }}" target="_blank" rel="noopener">
+                                    View on VirusTotal ↗
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                    {% if vt.malicious_vendors %}
+                    <h3 class="sub-heading">Detecting Vendors ({{ vt.malicious_vendors | length }})</h3>
+                    <div class="vendor-list">
+                        {% for vendor in vt.malicious_vendors %}
+                        <div class="vendor-item">
+                            <code class="vendor-name">{{ vendor.engine }}</code>
+                            <span class="vendor-result">{{ vendor.result }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% elif results.virustotal.file and results.virustotal.file.error %}
+                    <p class="no-data">{{ results.virustotal.file.error }}</p>
+                {% else %}
+                    <p class="no-data">No VirusTotal data returned for this hash.</p>
+                {% endif %}
+            </section>
+
+            <!-- Behavior Graph -->
+            <section class="card">
+                <h2>🔗 Indicator Relationship Graph</h2>
+                <p class="subtitle">Visualizes how the sample connects to extracted indicators</p>
+                <div class="graph-wrap">
+                    <svg id="graphSvg" width="100%" height="480" viewBox="0 0 900 480"></svg>
+                </div>
+                <div class="graph-legend">
+                    <span class="legend-item"><span class="legend-dot dot-file"></span> Sample</span>
+                    <span class="legend-item"><span class="legend-dot dot-url"></span> URL</span>
+                    <span class="legend-item"><span class="legend-dot dot-ip"></span> IP</span>
+                    <span class="legend-item"><span class="legend-dot dot-api"></span> API / Function</span>
+                    <span class="legend-item"><span class="legend-dot dot-pattern"></span> Pattern</span>
+                    <span class="legend-item"><span class="legend-dot dot-permission"></span> Permission</span>
+                    <span class="legend-item"><span class="legend-dot dot-command"></span> Command</span>
+                    <span class="legend-item"><span class="legend-dot dot-misc"></span> Other</span>
+                </div>
+            </section>
+
+            <!-- File Information -->
+            <section class="card">
+                <h2>📄 File Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Filename</span>
+                        <span class="info-value">{{ results.info.filename }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Size</span>
+                        <span class="info-value">{{ results.info.size_human }} ({{ results.info.size_bytes }} bytes)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Extension</span>
+                        <span class="info-value ext-value">{{ results.info.extension }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Last Modified</span>
+                        <span class="info-value">{{ results.info.last_modified }}</span>
+                    </div>
+                </div>
+
+                {% if results.file_type and results.file_type.magic_detected %}
+                <div class="file-type-row">
+                    <div class="info-item">
+                        <span class="info-label">Detected Type (Magic Bytes)</span>
+                        <span class="info-value">
+                            {{ results.file_type.magic_detected }}
+                            {% if results.file_type.extension_match is false %}
+                                <span class="mismatch-badge">⚠️ EXTENSION MISMATCH</span>
+                            {% elif results.file_type.extension_match is true %}
+                                <span class="match-badge">✓ Matches extension</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- Hashes -->
+            <section class="card">
+                <h2>🔑 Cryptographic Hashes</h2>
+                <div class="hash-list">
+                    <div class="hash-row">
+                        <span class="hash-label">MD5</span>
+                        <code class="hash-value">{{ results.hashes.md5 }}</code>
+                    </div>
+                    <div class="hash-row">
+                        <span class="hash-label">SHA1</span>
+                        <code class="hash-value">{{ results.hashes.sha1 }}</code>
+                    </div>
+                    <div class="hash-row">
+                        <span class="hash-label">SHA256</span>
+                        <code class="hash-value">{{ results.hashes.sha256 }}</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Risk Details -->
+            <section class="card">
+                <h2>📊 Risk Analysis</h2>
+                {% if results.risk.reasons %}
+                    <ul class="risk-reasons">
+                        {% for reason in results.risk.reasons %}
+                            <li class="reason-item">{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="no-data">No significant risk indicators detected</p>
+                {% endif %}
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-number">{{ results.risk.stats.strings }}</span>
+                        <span class="stat-label">Strings Found</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number">{{ results.risk.stats.urls }}</span>
+                        <span class="stat-label">URLs</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number">{{ results.risk.stats.ips }}</span>
+                        <span class="stat-label">IP Addresses</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number">{{ results.risk.stats.commands }}</span>
+                        <span class="stat-label">Suspicious Commands</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number">{{ '%.2f'|format(results.entropy) }}</span>
+                        <span class="stat-label">Entropy (max 8)</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number">{{ results.risk.stats.pattern_matches if results.risk.stats.pattern_matches is defined else 0 }}</span>
+                        <span class="stat-label">Pattern Matches</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pattern Matches -->
+            {% if results.pattern_matches %}
+            <section class="card">
+                <h2>🎯 Signature/Pattern Matches</h2>
+                <div class="pattern-list">
+                    {% for match in results.pattern_matches %}
+                    <div class="pattern-item sev-{{ match.severity }}">
+                        <div class="pattern-header">
+                            <span class="severity-badge sev-{{ match.severity }}">{{ match.severity }}</span>
+                            <strong>{{ match.rule }}</strong>
+                            <span class="pattern-type">{{ match.type }}</span>
+                        </div>
+                        <p class="pattern-desc">{{ match.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- PE Analysis -->
+            {% if results.pe and results.file_type.type_key == 'pe' %}
+            <section class="card">
+                <h2>🪟 PE Executable Analysis</h2>
+                {% if results.pe.error %}
+                    <p class="no-data">⚠️ {{ results.pe.error }}</p>
+                {% else %}
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Machine</span>
+                        <span class="info-value">{{ results.pe.machine }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Entry Point</span>
+                        <span class="info-value code-value">{{ results.pe.entry_point.virtual }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Compile Timestamp</span>
+                        <span class="info-value">{{ results.pe.timestamp }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Certificate</span>
+                        <span class="info-value">
+                            {% if results.pe.security_flags.certificate_present %}
+                                ✓ Present
+                            {% else %}
+                                ✗ Not signed
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                {% if results.pe.characteristics %}
+                <h3 class="sub-heading">File Characteristics</h3>
+                <div class="tag-row">
+                    {% for c in results.pe.characteristics %}
+                        <span class="tag-badge">{{ c }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if results.pe.dll_characteristics %}
+                <h3 class="sub-heading">Security Features (DLL Characteristics)</h3>
+                <div class="tag-row">
+                    {% for c in results.pe.dll_characteristics %}
+                        <span class="tag-badge security">{{ c }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if results.pe.sections %}
+                <h3 class="sub-heading">Sections</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Virtual Address</th>
+                            <th>Virtual Size</th>
+                            <th>Raw Size</th>
+                            <th>Entropy</th>
+                            <th>Executable</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for section in results.pe.sections %}
+                        <tr>
+                            <td class="mono">{{ section.name }}</td>
+                            <td class="mono">{{ section.virtual_address }}</td>
+                            <td>{{ section.virtual_size }}</td>
+                            <td>{{ section.raw_size }}</td>
+                            <td>
+                                <span class="entropy-badge {% if section.entropy > 7.5 %}ent-high{% elif section.entropy > 6 %}ent-med{% endif %}">{{ section.entropy }}</span>
+                            </td>
+                            <td>{{ '✓' if section.executable else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+
+                {% if results.pe.suspicious_apis %}
+                <h3 class="sub-heading">⚠️ Suspicious API Calls</h3>
+                <div class="api-list">
+                    {% for api in results.pe.suspicious_apis %}
+                    <div class="api-item">
+                        <code class="api-name">{{ api.api }}</code>
+                        <span class="api-dll">{{ api.dll }}</span>
+                        <span class="api-reason">{{ api.reason }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if results.pe.packed %}
+                <h3 class="sub-heading">📦 Packing Indicators</h3>
+                <ul class="risk-reasons">
+                    {% for p in results.pe.packed %}
+                        <li class="reason-item">{{ p }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if results.pe.section_mismatch %}
+                <h3 class="sub-heading">⚠️ Section Issues</h3>
+                <ul class="risk-reasons">
+                    {% for m in results.pe.section_mismatch %}
+                        <li class="reason-item">{{ m }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if results.pe.overlay %}
+                <h3 class="sub-heading">📎 Overlay Data</h3>
+                <p class="info-value">
+                    {{ results.pe.overlay.size_human }} appended at offset {{ results.pe.overlay.offset }}
+                </p>
+                {% endif %}
+                {% endif %}
+            </section>
+            {% endif %}
+
+            <!-- ELF Analysis -->
+            {% if results.elf and results.file_type.type_key == 'elf' %}
+            <section class="card">
+                <h2>🐧 ELF Executable Analysis</h2>
+                {% if results.elf.error %}
+                    <p class="no-data">⚠️ {{ results.elf.error }}</p>
+                {% else %}
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Class</span>
+                        <span class="info-value">{{ results.elf.elf_class }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Type</span>
+                        <span class="info-value">{{ results.elf.type }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Machine</span>
+                        <span class="info-value">{{ results.elf.machine }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Entry Point</span>
+                        <span class="info-value code-value">{{ results.elf.entry_point }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">PIE</span>
+                        <span class="info-value">{{ '✓' if results.elf.security.is_pie else '✗ Not PIE' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total Entropy</span>
+                        <span class="info-value">{{ results.elf.entropy }}</span>
+                    </div>
+                </div>
+
+                {% if results.elf.sections %}
+                <h3 class="sub-heading">Sections</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Size</th>
+                            <th>Entropy</th>
+                            <th>Executable</th>
+                            <th>Writable</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for section in results.elf.sections %}
+                        <tr>
+                            <td class="mono">{{ section.name }}</td>
+                            <td>{{ section.size }}</td>
+                            <td>
+                                <span class="entropy-badge {% if section.entropy > 7.5 %}ent-high{% elif section.entropy > 6 %}ent-med{% endif %}">{{ section.entropy }}</span>
+                            </td>
+                            <td>{{ '✓' if section.executable else '—' }}</td>
+                            <td>{{ '✓' if section.writable else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+
+                {% if results.elf.suspicious_functions %}
+                <h3 class="sub-heading">⚠️ Suspicious Functions</h3>
+                <div class="api-list">
+                    {% for f in results.elf.suspicious_functions %}
+                    <div class="api-item">
+                        <code class="api-name">{{ f.function }}</code>
+                        <span class="api-reason">{{ f.reason }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if results.elf.suspicious_sections %}
+                <h3 class="sub-heading">⚠️ Suspicious Sections</h3>
+                <ul class="risk-reasons">
+                    {% for s in results.elf.suspicious_sections %}
+                        <li class="reason-item">{{ s }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% endif %}
+            </section>
+            {% endif %}
+
+            <!-- APK Analysis -->
+            {% if results.apk and results.file_type.type_key in ('apk', 'zip') %}
+            <section class="card">
+                <h2>🤖 Android APK Analysis</h2>
+                {% if results.apk.error %}
+                    <p class="no-data">⚠️ {{ results.apk.error }}</p>
+                {% else %}
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Package Name</span>
+                        <span class="info-value">{{ results.apk.package_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Permissions</span>
+                        <span class="info-value">{{ results.apk.permission_count }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Entries</span>
+                        <span class="info-value">{{ results.apk.total_entries }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Debuggable</span>
+                        <span class="info-value">{{ '⚠️ YES' if results.apk.manifest_plain else 'No' }}</span>
+                    </div>
+                </div>
+
+                {% if results.apk.dangerous_permissions %}
+                <h3 class="sub-heading">⛔ Dangerous Permissions</h3>
+                <div class="api-list">
+                    {% for perm in results.apk.dangerous_permissions %}
+                    <div class="api-item">
+                        <code class="api-name">{{ perm.permission }}</code>
+                        <span class="api-reason">{{ perm.reason }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if results.apk.all_permissions %}
+                <h3 class="sub-heading">All Permissions</h3>
+                <div class="tag-row">
+                    {% for p in results.apk.all_permissions %}
+                        <span class="tag-badge">{{ p }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if results.apk.suspicious_code %}
+                <h3 class="sub-heading">⚠️ Suspicious Code</h3>
+                <div class="api-list">
+                    {% for f in results.apk.suspicious_code %}
+                    <div class="api-item">
+                        <code class="api-name">{{ f.file }}</code>
+                        <span class="api-reason">{{ f.finding }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if results.apk.dex_files or results.apk.native_libraries %}
+                <h3 class="sub-heading">Components</h3>
+                <div class="tag-row">
+                    {% for d in results.apk.dex_files %}
+                        <span class="tag-badge">DEX: {{ d }}</span>
+                    {% endfor %}
+                    {% for s in results.apk.native_libraries %}
+                        <span class="tag-badge">NATIVE: {{ s }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+            </section>
+            {% endif %}
+
+            <!-- Suspicious Commands -->
+            <section class="card">
+                <h2>⚡ Suspicious Command Indicators</h2>
+                {% if results.commands %}
+                    <div class="command-badges">
+                        {% for cmd in results.commands %}
+                            <span class="command-badge">{{ cmd }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-data">No suspicious commands detected</p>
+                {% endif %}
+            </section>
+
+            <!-- URLs -->
+            <section class="card">
+                <h2>🌐 URLs Found</h2>
+                {% if results.urls %}
+                    <ul class="url-list">
+                        {% for url in results.urls %}
+                            <li class="url-item"><code>{{ url }}</code></li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="no-data">No URLs found</p>
+                {% endif %}
+            </section>
+
+            <!-- IPs -->
+            <section class="card">
+                <h2>🌍 IP Addresses Found</h2>
+                {% if results.ips %}
+                    <ul class="url-list">
+                        {% for ip in results.ips %}
+                            <li class="url-item"><code>{{ ip }}</code></li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="no-data">No IP addresses found</p>
+                {% endif %}
+            </section>
+
+            <!-- Strings -->
+            <section class="card">
+                <h2>📜 Extracted Strings <span class="count-badge">First 200</span></h2>
+                {% if results.strings %}
+                    <div class="strings-container" id="stringsContainer">
+                        {% for string in results.strings %}
+                            <code class="string-item">{{ string }}</code>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-data">No readable strings found</p>
+                {% endif %}
+            </section>
+
+            <div class="actions">
+                <a href="{{ url_for('analyze') }}" class="btn btn-primary">Analyze Another File</a>
+            </div>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        </div>
+
+    <script>
+        window.GRAPH_DATA = {{ graph_json | safe }};
+    </script>
+    <script src="{{ url_for('static', filename='graph.js') }}"></script>
+    <script>
+        // Limit displayed strings to first 100 by default
+        const container = document.getElementById('stringsContainer');
+        if (container) {
+            const items = container.querySelectorAll('.string-item');
+            if (items.length > 100) {
+                for (let i = 100; i < items.length; i++) {
+                    items[i].style.display = 'none';
+                }
+            }
+        }
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ community.name }} | Cloud Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <section class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+                    <div>
+                        <h2>🏘️ {{ community.name }}</h2>
+                        <p class="subtitle">
+                            {{ (community.description or 'No description yet.') }} · 👥 {{ community.member_count }} member{{ 's' if community.member_count != 1 }} · owned by <strong>{{ community.owner_name }}</strong>
+                        </p>
+                    </div>
+                    {% if mine %}
+                    <form method="post" action="{{ url_for('sandbox_leave', slug=community.slug) }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-secondary btn-sm">Leave community</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{{ url_for('sandbox_join', slug=community.slug) }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-primary btn-sm">🤝 Join community</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </section>
+
+            {% if mine %}
+            <div class="dash-cols">
+                <div class="card">
+                    <h2>🧾 Shared Verdicts</h2>
+                    {% if verdicts %}
+                    <div class="verdict-list">
+                        {% for v in verdicts %}
+                        <div class="verdict-card {{ 'verdict-flagged' if v.flag_count >= 2 }}">
+                            <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap">
+                                <span class="mono"><strong>{{ v.filename }}</strong></span>
+                                <span class="risk-pill risk-pill-{{ v.risk_color }}">{{ v.risk_score }} · {{ v.risk_level }}</span>
+                            </div>
+                            <p class="mono small muted" style="word-break:break-all">{{ v.sha256 }}</p>
+                            {% if v.note %}<p class="small">{{ v.note }}</p>{% endif %}
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:10px">
+                                <span class="muted small">by <strong>{{ v.username }}</strong> · {{ v.created_at[:16].replace('T', ' ') }} UTC</span>
+                                <span class="small">
+                                    🚩 {{ v.flag_count }} flag{{ 's' if v.flag_count != 1 }}
+                                    <form method="post" action="{{ url_for('sandbox_flag', verdict_id=v.id) }}" class="inline-form" title="Flag this verdict">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-secondary btn-sm">🚩 Flag</button>
+                                    </form>
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="no-data">No verdicts shared yet.</p>
+                    {% endif %}
+
+                    <h2 style="margin-top:22px">📤 Share an Analysis</h2>
+                    <p class="muted small">Share one of your analysed files for team triage.</p>
+                    <form method="post" action="{{ url_for('sandbox_share', slug=community.slug) }}" class="settings-form">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <label class="form-label" for="report_id">Your recent analysis</label>
+                        <select class="form-input" id="report_id" name="report_id" required>
+                            {% if summaries %}
+                            {% for s in summaries %}
+                            <option value="{{ s.report_id }}">
+                                {{ s.filename }} · {{ s.risk_score }}/100 {{ s.risk_level }} · {{ s.sha256[:12] }}…
+                            </option>
+                            {% endfor %}
+                            {% else %}
+                            <option value="">(no analyses yet — run one first)</option>
+                            {% endif %}
+                        </select>
+                        <label class="form-label" for="note">Triage note (optional)</label>
+                        <textarea class="form-input" id="note" name="note" rows="2" maxlength="280" placeholder="Context for your team..."></textarea>
+                        <button type="submit" class="btn btn-primary" {{ 'disabled' if not summaries }}>Share verdict</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h2>👥 Members</h2>
+                    {% if members %}
+                    <div class="member-list">
+                        {% for m in members %}
+                        <div class="member-chip">
+                            <span>👤 {{ m.username }}</span>
+                            {% if m.role == 'owner' %}
+                            <span class="role-tag">Owner</span>
+                            {% else %}
+                            <span class="muted small">joined {{ m.joined_at[:10] }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <section class="card">
+                <p class="no-data">Join this community to view its shared verdicts and contribute to triage.</p>
+            </section>
+            {% endif %}
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

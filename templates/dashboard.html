@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <section class="card">
+                <h2>Welcome back, {{ user.username }} 👋</h2>
+                <p class="subtitle">
+                    Account: {{ user.email }} · Joined {{ user.created_at[:10] }}
+                </p>
+            </section>
+
+            <section class="stats-grid dashboard-stats">
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.total }}</span>
+                    <span class="stat-label">Analyses Run</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.avg_score }}</span>
+                    <span class="stat-label">Avg Risk Score</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">{{ stats.high_vt }}</span>
+                    <span class="stat-label">Files Flagged (VT ≥ 3)</span>
+                </div>
+                <div class="stat-box risk-ring stat-green">
+                    <span class="stat-number">{{ stats.by_color.green }}</span>
+                    <span class="stat-label">Low Risk</span>
+                </div>
+                <div class="stat-box risk-ring stat-orange">
+                    <span class="stat-number">{{ stats.by_color.orange }}</span>
+                    <span class="stat-label">Medium Risk</span>
+                </div>
+                <div class="stat-box risk-ring stat-red">
+                    <span class="stat-number">{{ stats.by_color.red }}</span>
+                    <span class="stat-label">High Risk</span>
+                </div>
+            </section>
+
+            <div class="dash-cols">
+                <div class="card">
+                    <h2>🕐 Recent Analyses</h2>
+                    {% if summaries %}
+                    <div class="history-table-wrap">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>File</th>
+                                    <th>Risk</th>
+                                    <th>VT</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in summaries %}
+                                <tr>
+                                    <td class="mono">{{ entry.filename }}</td>
+                                    <td>
+                                        <span class="risk-pill risk-pill-{{ entry.risk_color }}">
+                                            {{ entry.risk_score }} · {{ entry.risk_level }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if entry.vt and entry.vt.disabled %}
+                                            <span class="vt-line muted">not configured</span>
+                                        {% elif entry.vt %}
+                                            <span class="vt-line {{ 'vt-line-mal' if entry.vt.detections >= 3 else 'vt-line-ok' if entry.vt.detections == 0 else 'vt-line-susp' }}">
+                                                {{ entry.vt.detections }}/{{ entry.vt.total_engines }}
+                                            </span>
+                                        {% else %}
+                                            <span class="muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="history-actions">
+                                        <a href="{{ url_for('report', report_id=entry.report_id) }}" class="btn btn-secondary btn-sm">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <a href="{{ url_for('history') }}" class="btn btn-secondary btn-sm">View all history →</a>
+                    {% else %}
+                    <p class="no-data">No analyses yet — <a href="{{ url_for('analyze') }}">upload your first file</a>.</p>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <h2>🚀 Quick Actions</h2>
+                    <div class="quick-actions">
+                        <a href="{{ url_for('analyze') }}" class="quick-link">
+                            <span class="quick-icon">🔬</span>
+                            <span><strong>Analyze a file</strong><br><small>Upload a suspicious sample</small></span>
+                        </a>
+                        <a href="{{ url_for('crypto') }}" class="quick-link">
+                            <span class="quick-icon">🔐</span>
+                            <span><strong>Encrypt a file</strong><br><small>AES-256-GCM protection</small></span>
+                        </a>
+                        <a href="{{ url_for('history') }}" class="quick-link">
+                            <span class="quick-icon">📋</span>
+                            <span><strong>View reports</strong><br><small>Revisit past analyses</small></span>
+                        </a>
+                        <a href="{{ url_for('contact') }}" class="quick-link">
+                            <span class="quick-icon">🆘</span>
+                            <span><strong>Get support</strong><br><small>Talk to the team</small></span>
+                        </a>
+                        <a href="{{ url_for('sandbox') }}" class="quick-link">
+                            <span class="quick-icon">🏘️</span>
+                            <span><strong>Cloud Sandbox</strong><br><small>Triage verdicts as a team</small></span>
+                        </a>
+                        <a href="{{ url_for('live') }}" class="quick-link">
+                            <span class="quick-icon">🔔</span>
+                            <span><strong>Live Feed</strong><br><small>Alerts, watchlists &amp; digest</small></span>
+                        </a>
+                    </div>
+
+                    {% if stats.riskiest %}
+                    <div class="warning" style="margin-top:18px">
+                        <strong>⚠️ Riskiest file:</strong>
+                        {{ stats.riskiest.filename }} (score {{ stats.riskiest.risk_score }}/100 · {{ stats.riskiest.risk_level }})
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <section class="profile-card" aria-label="Your profile">
+                <div class="profile-header">
+                    <div class="profile-avatar" aria-hidden="true">{{ (settings.display_name or user.username)[:1]|upper }}</div>
+
+                    <div class="profile-info">
+                        <p class="profile-kicker">Profile</p>
+                        <h2 class="profile-name">{{ settings.display_name or user.username }}</h2>
+                        <p class="profile-handle">@{{ user.username }}
+                            {% if user.is_admin %}<span class="profile-badge">Admin</span>{% endif %}
+                        </p>
+                        {% if settings.bio %}
+                            <p class="profile-bio">{{ settings.bio }}</p>
+                        {% else %}
+                            <p class="profile-bio profile-bio-empty">No bio yet — tell your team who you are.</p>
+                        {% endif %}
+                        <p class="profile-meta">
+                            <span>✉️ {{ user.email }}</span>
+                            <span>🗓 Joined {{ user.created_at[:10] }}</span>
+                            {% if mailer_configured and not user.get('email_verified') %}
+                                <span class="profile-meta-warn">⚠️ Email not verified</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="profile-actions">
+                        <a href="{{ url_for('settings') }}#profile-form" class="btn btn-secondary">Edit profile</a>
+                        <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change password</a>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>⚙️ Settings</h2>
+                <p class="subtitle">
+                    Account: {{ user.email }} · Joined {{ user.created_at[:10] }}
+                </p>
+
+                <form method="post" action="{{ url_for('settings') }}" class="settings-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+                    <h3 class="settings-head">👤 Profile</h3>
+                    <label class="form-label" for="display_name">Display name</label>
+                    <input class="form-input" type="text" id="display_name" name="display_name" maxlength="60" value="{{ settings.display_name }}" placeholder="How you appear to your team">
+
+                    <label class="form-label" for="bio">Bio</label>
+                    <textarea class="form-input" id="bio" name="bio" rows="3" maxlength="280" placeholder="Analyst, incident response...">{{ settings.bio }}</textarea>
+
+                    <h3 class="settings-head">🌐 Language</h3>
+                    <label class="form-label" for="language">Interface language</label>
+                    <select class="form-input" id="language" name="language">
+                        <option value="en" {{ 'selected' if settings.language == 'en' }}>English</option>
+                        <option value="am" {{ 'selected' if settings.language == 'am' }}>አማርኛ (Amharic)</option>
+                        <option value="fr" {{ 'selected' if settings.language == 'fr' }}>Français</option>
+                        <option value="ar" {{ 'selected' if settings.language == 'ar' }}>العربية (Arabic)</option>
+                        <option value="es" {{ 'selected' if settings.language == 'es' }}>Español</option>
+                        <option value="sw" {{ 'selected' if settings.language == 'sw' }}>Kiswahili</option>
+                    </select>
+                    <p class="muted small">Preference is saved on your account. (Interface text is currently English.)</p>
+
+                    <h3 class="settings-head">🎨 Appearance</h3>
+                    <label class="form-label" for="theme">Theme</label>
+                    <select class="form-input" id="theme" name="theme">
+                        <option value="auto" {{ 'selected' if settings.theme in ('auto', 'light') }}>🌞 Light (default)</option>
+                        <option value="dark" {{ 'selected' if settings.theme == 'dark' }}>🌙 Dark</option>
+                    </select>
+                    <p class="muted small">The interface starts in light mode. Pick Dark anytime and it's saved to your account.</p>
+
+                    <h3 class="settings-head">🔔 Notifications (Phase 7)</h3>
+                    <label class="form-check">
+                        <input type="checkbox" name="weekly_digest" value="1" {{ 'checked' if settings.weekly_digest }}> Weekly threat digest
+                    </label>
+                    <label class="form-check">
+                        <input type="checkbox" name="email_alerts" value="1" {{ 'checked' if settings.email_alerts }}> Email-style alerts (feed only for now)
+                    </label>
+                    <label class="form-check">
+                        <input type="checkbox" name="notify_flag" value="1" {{ 'checked' if settings.notify_flag }}> Notify me when my verdicts are flagged
+                    </label>
+
+                    <h3 class="settings-head">🛡️ General / Basic</h3>
+                    <label class="form-label" for="risk_threshold">Default risk threshold (0-100): <strong>{{ settings.risk_threshold }}</strong></label>
+                    <input class="form-input" type="range" id="risk_threshold" name="risk_threshold" min="0" max="100" step="1" value="{{ settings.risk_threshold }}" style="padding:0" oninput="document.getElementById('threshold_value').textContent = this.value">
+                    <p class="muted small">Files scoring at or above this level are treated as high priority. Current: <span id="threshold_value">{{ settings.risk_threshold }}</span></p>
+
+                    <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+                </form>
+            </section>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

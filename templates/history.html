@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis History | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <section class="card">
+                <h2>📋 Analysis History</h2>
+                {% if q %}
+                <p class="subtitle">Results for <strong>"{{ q }}"</strong> — most recent first.</p>
+                {% else %}
+                <p class="subtitle">Past analyses, most recent first (up to 20 stored)</p>
+                {% endif %}
+
+                {% if entries %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Analyzed</th>
+                                <th>Filename</th>
+                                <th>Size</th>
+                                <th>Risk</th>
+                                <th>MD5 (short)</th>
+                                <th>VirusTotal</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in entries %}
+                            <tr>
+                                <td class="mono muted">{{ entry.analyzed_at_iso }}</td>
+                                <td class="mono">{{ entry.filename }}</td>
+                                <td>{{ entry.size_human }}</td>
+                                <td>
+                                    <span class="risk-pill risk-pill-{{ entry.risk_color }}">
+                                        {{ entry.risk_score }} · {{ entry.risk_level }}
+                                    </span>
+                                </td>
+                                <td class="mono muted">{{ entry.md5[:12] }}…</td>
+                                <td>
+                                    {% if entry.vt and entry.vt.disabled %}
+                                        <span class="vt-line muted">not configured</span>
+                                    {% elif entry.vt %}
+                                        <span class="vt-line {{ 'vt-line-mal' if entry.vt.detections >= 3 else 'vt-line-ok' if entry.vt.detections == 0 else 'vt-line-susp' }}">
+                                            {{ entry.vt.detections }}/{{ entry.vt.total_engines }} detections
+                                        </span>
+                                    {% else %}
+                                        <span class="muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="history-actions">
+                                    <a href="{{ url_for('report', report_id=entry.report_id) }}" class="btn btn-secondary btn-sm">📄 View</a>
+                                    <a href="{{ url_for('download_report_html', report_id=entry.report_id) }}" class="btn btn-secondary btn-sm">⬇️ HTML</a>
+                                    <a href="{{ url_for('download_report_json', report_id=entry.report_id) }}" class="btn btn-secondary btn-sm">⬇️ JSON</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    {% if q %}
+                    <p class="no-data">No analyses match <strong>"{{ q }}"</strong>. Try a different hash, filename or verdict.</p>
+                    {% else %}
+                    <p class="no-data">No analyses found yet. Upload a file to get started.</p>
+                    {% endif %}
+                {% endif %}
+            </section>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

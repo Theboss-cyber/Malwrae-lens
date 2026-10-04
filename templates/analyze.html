@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyze a File | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        <p class="tagline"><a href="{{ url_for('home') }}" class="back-link">← Home</a> · Static Malware File Analyzer</p>
+
+        
+
+        <main class="app-main analyze-main" id="main-content">
+            <div class="upload-card upload-wrap">
+                <h2>Analyze a File</h2>
+                <p class="subtitle">Upload a file to check for suspicious indicators</p>
+
+                <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-content">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <p>Drag &amp; drop a file here</p>
+                            <p class="small">or</p>
+                            <button type="button" class="btn btn-secondary" id="browseBtn">Browse Files</button>
+                            <input type="file" name="file" id="fileInput" accept=".{{ allowed_extensions|join(',.') }}" hidden>
+                            <p class="selected-file" id="selectedFile"></p>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full" id="analyzeBtn" disabled>
+                        Analyze File
+                    </button>
+                </form>
+
+                <div class="allowed-files">
+                    <h3>Allowed File Types</h3>
+                    <div class="ext-badges">
+                        {% for ext in allowed_extensions %}
+                            <span class="ext-badge">{{ ext }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const selectedFile = document.getElementById('selectedFile');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        browseBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                updateSelectedFile(e.target.files[0]);
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateSelectedFile(files[0]);
+            }
+        });
+
+        function updateSelectedFile(file) {
+            selectedFile.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+            analyzeBtn.disabled = false;
+            dropZone.classList.add('has-file');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

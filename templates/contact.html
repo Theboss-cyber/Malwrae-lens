@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Support | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <div class="card">
+                <h2>🆘 Contact Support</h2>
+                <p class="subtitle">Questions, bugs, feature ideas — we read everything.</p>
+
+                <form method="post" action="{{ url_for('contact') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <select name="subject" id="subject" class="text-input" required>
+                            <option value="" disabled selected>Choose a topic…</option>
+                            <option>Bug report</option>
+                            <option>Feature request</option>
+                            <option>Question about results</option>
+                            <option>Account &amp; security</option>
+                            <option>Partnership</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea name="message" id="message" class="text-input"
+                                  rows="7" placeholder="Tell us what happened or what you'd like to see…"
+                                  minlength="10" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>❓ Frequently Asked Questions</h2>
+                <div class="faq">
+                    <details class="faq-item">
+                        <summary>Is my uploaded file executed?</summary>
+                        <p>No. MalwareLens is a <strong>static analyzer</strong> — files are inspected without ever being run. This makes it safe to check suspicious samples.</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>How does the risk score work?</summary>
+                        <p>Every finding (entropy, suspicious strings, imports, signatures, VirusTotal) contributes to a transparent 0–100 score with readable reasoning behind it.</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>Are my reports private?</summary>
+                        <p>Yes. Reports are scoped to your account only and stored temporarily on the server. On the free tier, report history is rebuilt from a local store.</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>Can the tool harm my computer?</summary>
+                        <p>No. Uploads live in an isolated temporary folder, are never executed, and are periodically deleted. Only upload samples you have permission to examine.</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>Why is VirusTotal grayed out?</summary>
+                        <p>The integration needs an API key configured by the operator. Without one, MalwareLens still works fully offline using its own analyzers.</p>
+                    </details>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📮 Other Ways to Reach Us</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">support@malwarelens.example</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Response Time</span>
+                        <span class="info-value">1-2 business days</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Docs</span>
+                        <span class="info-value">Help center &amp; guides</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

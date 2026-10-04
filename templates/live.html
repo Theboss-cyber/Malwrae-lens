@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Feed &amp; Alerts | MalwareLens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body class="{{ body_class }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {% include 'partials/_shell_open.html' %}
+        
+
+        
+
+        <main class="app-main results-main" id="main-content">
+            <section class="card">
+                <h2>📊 This Week's Threat Digest <span class="phase-badge">Phase 7</span></h2>
+                <p class="subtitle">Community verdict activity over the last 7 days alongside your personal alerts.</p>
+                <div class="digest-grid">
+                    <div class="digest-item"><span class="digest-num">{{ digest.total_verdicts }}</span><span class="digest-label">Shared verdicts (7d)</span></div>
+                    <div class="digest-item risk-ring stat-red"><span class="digest-num">{{ digest.red }}</span><span class="digest-label">High risk</span></div>
+                    <div class="digest-item risk-ring stat-orange"><span class="digest-num">{{ digest.orange }}</span><span class="digest-label">Medium risk</span></div>
+                    <div class="digest-item risk-ring stat-green"><span class="digest-num">{{ digest.green }}</span><span class="digest-label">Low risk</span></div>
+                    <div class="digest-item"><span class="digest-num">{{ digest.my_alerts }}</span><span class="digest-label">Your new alerts</span></div>
+                    <div class="digest-item"><span class="digest-num">{{ digest.my_verdicts }}</span><span class="digest-label">Your shares</span></div>
+                </div>
+                {% if digest.top_hashes %}
+                <h3 style="margin-top:16px">Most repeated hashes this week</h3>
+                <table class="history-table">
+                    <thead>
+                        <tr><th>File</th><th>SHA-256</th><th>Mentions</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for h in digest.top_hashes %}
+                        <tr>
+                            <td class="mono">{{ h.filename }}</td>
+                            <td class="mono small muted">{{ h.sha256[:18] }}…</td>
+                            <td>{{ h.n }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </section>
+
+            <div class="dash-cols">
+                <div class="card">
+                    <h2>🔔 Alerts
+                        {% if unread %}<span class="unread-badge">{{ unread }} new</span>{% endif %}
+                    </h2>
+                    {% if alerts %}
+                    <ul class="alert-list">
+                        {% for a in alerts %}
+                        <li class="alert-item {{ 'alert-item-unread' if not a.read }} alert-level-{{ a.level }}">
+                            <span>{{ a.message }}</span>
+                            <span class="muted small">{{ a.created_at[:16].replace('T', ' ') }} UTC</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <form method="post" action="{{ url_for('alerts_read') }}" style="margin-top:14px">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-secondary btn-sm">Mark all read</button>
+                    </form>
+                    {% else %}
+                    <p class="no-data">No alerts yet — watchlists will raise them here.</p>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <h2>🎯 Watchlist</h2>
+                    <p class="muted small">Get an alert whenever a hash you track is shared in any community.</p>
+                    <form method="post" action="{{ url_for('watch_add') }}" class="settings-form">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <label class="form-label" for="wlabel">Label</label>
+                        <input class="form-input" type="text" id="wlabel" name="label" maxlength="40" placeholder="e.g. APT-44 loader" required>
+                        <label class="form-label" for="wsha">SHA-256</label>
+                        <input class="form-input mono" type="text" id="wsha" name="sha256" pattern="[0-9a-fA-F]{64}" maxlength="64" placeholder="64-character hex hash" required>
+                        <button type="submit" class="btn btn-primary">➕ Add to watchlist</button>
+                    </form>
+                    {% if watchlist %}
+                    <ul class="alert-list" style="margin-top:14px">
+                        {% for w in watchlist %}
+                        <li class="alert-item">
+                            <span><strong>{{ w.label }}</strong><br><span class="mono small muted">{{ w.sha256[:20] }}…</span></span>
+                            <form method="post" action="{{ url_for('watch_remove', watch_id=w.id) }}" class="inline-form">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn btn-secondary btn-sm">Remove</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <section class="card">
+                <h2>📡 Live Feed</h2>
+                {% if feed %}
+                <ul class="feed-list">
+                    {% for e in feed %}
+                    <li class="feed-item">
+                        <span class="feed-icon">{{ verb_icons.get(e.verb, '📌') }}</span>
+                        <span class="feed-body">
+                            <strong>{{ e.username }}</strong>
+                            {{ e.verb.replace('_', ' ') }}
+                            <span class="feed-target">{{ e.target }}</span>
+                            {% if e.detail %}<span class="muted small"> · {{ e.detail }}</span>{% endif %}
+                            <span class="muted small"> · {{ e.created_at[:16].replace('T', ' ') }} UTC</span>
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="no-data">No community activity yet — create a sandbox community and share verdicts to light it up.</p>
+                {% endif %}
+            </section>
+        </main>
+{% include 'partials/_shell_close.html' %}
+
+        </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
