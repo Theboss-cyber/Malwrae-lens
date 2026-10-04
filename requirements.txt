@@ -2,3 +2,4 @@ Flask==3.0.3
 Werkzeug==3.0.3
 pefile==2024.8.26
 pycryptodome==3.23.0
+gunicorn==23.0.0
