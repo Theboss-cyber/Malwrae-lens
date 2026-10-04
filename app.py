@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 import sys
+import tempfile
 import threading
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -60,6 +61,17 @@ def _data_dir(env_name, fallback_name):
 UPLOAD_FOLDER = _data_dir("MALWARELENS_UPLOAD_DIR", "uploads")
 REPORT_FOLDER = _data_dir("MALWARELENS_REPORT_DIR", "reports")
 DB_PATH = Path(os.environ.get("MALWARELENS_DB", str(Path(__file__).parent / "malwarelens.db")))
+# Render free / serverless hosts may not let us write where the operator
+# configured the database (e.g. a disk that isn't mounted). Fall back to a
+# writable temp location so the app still boots instead of crashing.
+try:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(DB_PATH, "a"):
+        pass
+except OSError:
+    DB_PATH = Path(tempfile.gettempdir()) / "malwarelens.db"
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    log.warning("MALWARELENS_DB not writable - using %s", DB_PATH)
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
 app.config["REPORT_FOLDER"] = str(REPORT_FOLDER)
 app.config["DB_PATH"] = str(DB_PATH)

@@ -11,7 +11,7 @@ services:
       - key: REQUIRE_EMAIL_VERIFY
         value: "0"
       - key: MALWARELENS_DB
-        value: /var/data/malwarelens.db
+        value: /tmp/malwarelens.db
       - key: SMTP_PORT
         value: "587"
       - key: MAIL_FROM_NAME
