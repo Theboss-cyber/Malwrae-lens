@@ -47,11 +47,7 @@
 
                     <div class="profile-actions">
                         <a href="{{ url_for('settings') }}#profile-form" class="btn btn-secondary">Edit profile</a>
-                        {% if user.username and not user.username.startswith('guest_') %}
-                        <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change password</a>
-                        {% else %}
                         <a href="{{ url_for('reset_demo') }}" class="btn btn-secondary">Start fresh session</a>
-                        {% endif %}
                     </div>
                 </div>
 

@@ -30,13 +30,10 @@
           <span>{{ session.get('username', 'guest') }}</span>&nbsp;▾
         </button>
         <div class="profile-menu">
-          <a href="{{ url_for('change_password') }}" class="profile-item">🔑 Change Password</a>
           <a href="{{ url_for('settings') }}" class="profile-item">⚙️ Settings</a>
-          <a href="{{ url_for('reset_demo') }}" class="profile-item">🔄 Open in new session</a>
-          <div class="profile-sep"></div>
           <form method="post" action="{{ url_for('logout') }}">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-            <button type="submit" class="profile-item profile-logout">🚪 Logout</button>
+            <button type="submit" class="profile-item profile-logout">🔄 Start fresh session</button>
           </form>
         </div>
       </div>
@@ -104,12 +101,6 @@
 
         <div class="side-group">
           <p class="side-label">User Content</p>
-          <a class="side-link {{ 'active' if r == 'change_password' }}" href="{{ url_for('change_password') }}" aria-label="Change Password">
-            <span class="side-ico" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5"></circle><path d="m21 2-9.6 9.6"></path><path d="m15.5 7.5 3 3L22 7l-3-3"></path></svg>
-            </span>
-            <span class="side-txt">Change Password</span>
-          </a>
           <a class="side-link {{ 'active' if r == 'contact' }}" href="{{ url_for('contact') }}" aria-label="Support">
             <span class="side-ico" aria-hidden="true">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"></path></svg>

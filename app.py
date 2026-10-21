@@ -91,8 +91,6 @@ _crypto = CryptoService(UPLOAD_FOLDER)
 _users = UserService(DB_PATH)
 _mailer = EmailService()
 _rate = RateLimiter()
-_reset_serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY") or app.secret_key, salt="ml-password-reset")
-_verify_serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY") or app.secret_key, salt="ml-email-verify")
 
 # One-shot operator bootstrap: set MALWARELENS_BOOTSTRAP_ADMIN=<username>
 # in PythonAnywhere -> Web -> Environment variables to promote an account.
@@ -154,32 +152,6 @@ def _absolute(endpoint, **values):
     if "127.0.0.1" in base or "localhost" in base:
         return base
     return base.replace("http://", "https://", 1)
-
-
-def _send_verification(user):
-    """E-mail a 7-day verification link (no-op when mail is unconfigured)."""
-    if not _mailer.configured or not user or user.get("email_verified"):
-        return False
-    token = _verify_serializer.dumps(user["email"])
-    link = _absolute("verify_email", token=token)
-    threading.Thread(
-        target=_mailer.send_verification,
-        args=(user["email"], user["username"], link),
-        daemon=True,
-    ).start()
-    return True
-
-
-def _require_email_verify():
-    """True when new accounts must activate via e-mail before signing in.
-
-    Defaults to on only when real mail delivery is configured. The operator can
-    force it off/on with REQUIRE_EMAIL_VERIFY=0|1 without touching SMTP config.
-    """
-    override = os.environ.get("REQUIRE_EMAIL_VERIFY")
-    if override is not None:
-        return override == "1"
-    return _mailer.configured
 
 
 @app.context_processor
@@ -274,7 +246,7 @@ def _owns_report(result, user_id):
     return bool(result) and (result.get("_meta") or {}).get("user_id") == user_id
 
 
-def _flash_and_redirect(message, endpoint="login", category="error", **url_kwargs):
+def _flash_and_redirect(message, endpoint="dashboard", category="error", **url_kwargs):
     flash(message, category)
     return redirect(url_for(endpoint, **url_kwargs))
 
@@ -288,12 +260,10 @@ def _clear_guest_session():
         session.clear()
 
 
-# Endpoints that must stay reachable without a session: the auth pages
-# themselves (kept for tests/back-compat), the homepage, and static assets.
+# Endpoints that must stay reachable without a session: the public homepage,
+# legacy auth redirects, and static assets.
 AUTH_PAGE_ENDPOINTS = {
-    "login", "signup", "forgot_password", "reset_password",
-    "verify_email", "resend_verification", "google_login",
-    "static", "home",
+    "home", "static", "_legacy_auth_redirect", "demo", "reset_demo",
 }
 
 
@@ -324,89 +294,25 @@ def _auto_guest():
 
 
 # --------------------------------------------------------------------------
-# Auth
+# Open access (no accounts, no sign-in)
 # --------------------------------------------------------------------------
-
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
-    _clear_guest_session()
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-    if request.method == "POST":
-        if not _rate.allow(f"signup:{_client_ip()}", 8, 3600):
-            flash("Too many registration attempts from your address. Try again later.", "error")
-            return render_template("auth.html", active="signup",
-                                   mailer_configured=_mailer.configured)
-        try:
-            username = request.form.get("username", "")
-            email = request.form.get("email", "")
-            user_id = _users.register(
-                username,
-                email,
-                request.form.get("password", ""),
-            )
-        except UserError as e:
-            return _flash_and_redirect(str(e), endpoint="signup")
-        user = _users.get_user(user_id)
-        if _require_email_verify():
-            # Real delivery is possible -> require proof the mailbox exists.
-            _send_verification(user)
-            flash(
-                "Account created! We emailed a verification link to activate your login. "
-                "Check your inbox (and spam).",
-                "success",
-            )
-            return redirect(url_for("login"))
-        session["user_id"] = user_id
-        session["username"] = username.strip()
-        session.permanent = True
-        flash("Account created - welcome to MalwareLens!", "success")
-        return redirect(url_for("dashboard"))
-    return render_template("auth.html", active="signup",
-                           mailer_configured=_mailer.configured)
-
+# Sign-in and registration have been removed from the product: every visitor
+# is auto-provisioned a private guest session (see _auto_guest above). The
+# legacy auth URLs below are kept only as convenience redirects so any old
+# bookmark or link still lands somewhere useful instead of erroring.
 
 @app.route("/login", methods=["GET", "POST"])
-def login():
-    _clear_guest_session()
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-    if request.method == "POST":
-        ident = request.form.get("username", "").strip()
-        if not _rate.allow(f"login:{_client_ip()}:{ident.lower()}", 50, 900):
-            wait = _rate.retry_after(f"login:{_client_ip()}:{ident.lower()}", 900)
-            flash(f"Too many sign-in attempts. Please wait about {wait}s and try again.", "error")
-            return render_template("auth.html", active="login",
-                                   mailer_configured=_mailer.configured,
-                                   next=request.form.get("next", ""))
-        user = _users.authenticate(ident, request.form.get("password", ""))
-        if user is None:
-            return _flash_and_redirect("Invalid username/email or password.", endpoint="login")
-        if not user.get("email_verified") and _require_email_verify():
-            _send_verification(user)
-            flash(
-                "Your email isn't verified yet — we just sent a fresh verification link. "
-                "Click it in your inbox (or spam) before signing in.",
-                "error",
-            )
-            return render_template("auth.html", active="login",
-                                   mailer_configured=_mailer.configured,
-                                   next=request.form.get("next", ""))
-        session["user_id"] = user["id"]
-        session["username"] = user["username"]
-        session.permanent = bool(request.form.get("remember"))
-        next_url = request.form.get("next", "") or url_for("dashboard")
-        if not next_url.startswith("/"):
-            next_url = url_for("dashboard")
-        return redirect(next_url)
-    return render_template("auth.html", active="login",
-                           mailer_configured=_mailer.configured,
-                           next=request.args.get("next", ""))
+@app.route("/signup", methods=["GET", "POST"])
+@app.route("/forgot-password", methods=["GET", "POST"])
+@app.route("/reset-password/<path:_token>", methods=["GET", "POST"])
+@app.route("/verify-email/<path:_token>", methods=["GET"])
+@app.route("/resend-verification", methods=["GET", "POST"])
+@app.route("/auth/google", methods=["GET"])
+@app.route("/auth/google/callback", methods=["GET"])
+def _legacy_auth_redirect(**_kwargs):
+    """Retired auth endpoints -> just open the workspace."""
+    return redirect(url_for("dashboard"))
 
-
-# --------------------------------------------------------------------------
-# Open demo access (no sign-in required)
-# --------------------------------------------------------------------------
 
 @app.route("/demo")
 def demo():
@@ -434,159 +340,21 @@ def reset_demo():
     return redirect(url_for("home"))
 
 
-# --------------------------------------------------------------------------
-# Email verification
-# --------------------------------------------------------------------------
-
-VERIFY_MAX_AGE = 7 * 24 * 3600  # 7 days
-
-
-@app.route("/verify-email/<token>", methods=["GET"])
-def verify_email(token):
-    """One-click activation link from the verification e-mail."""
-    if "user_id" in session:
-        session.clear()
-    try:
-        email = _verify_serializer.loads(token, max_age=VERIFY_MAX_AGE)
-    except Exception:
-        flash("This verification link is invalid or has expired. Request a new one below.", "error")
-        return redirect(url_for("login"))
-    user = _users.get_by_email(email)
-    if user is None:
-        flash("This verification link is invalid or has expired. Request a new one below.", "error")
-        return redirect(url_for("login"))
-    _users.mark_verified(user["id"])
-    flash("Email verified! You can now sign in securely.", "success")
-    return redirect(url_for("login"))
-
-
-@app.route("/resend-verification", methods=["POST"])
-@require_csrf
-def resend_verification():
-    if not _rate.allow(f"resend:{_client_ip()}", 4, 3600):
-        return _flash_and_redirect("Too many verification requests. Try again later.", endpoint="login")
-    email = request.form.get("email", "").strip()
-    user = _users.get_by_email(email) if email else None
-    if user and not user.get("email_verified") and _mailer.configured:
-        _send_verification(user)
-        # Generic message either way: never reveal whether an address exists.
-        flash("If that account exists and hasn't been verified, a new link is on its way.", "info")
-    else:
-        flash("If that account exists and hasn't been verified, a new link is on its way.", "info")
-    return redirect(url_for("login"))
-
-
 @app.route("/logout", methods=["POST"])
 @require_csrf
 def logout():
-    # Drop permanent-session flags first so the cleared session cookie is not
-    # re-issued with a 30-day expiry (defensive; prevents stale-login oddities).
+    # No accounts to log out of — just start a clean workspace.
+    uid = session.get("user_id")
+    username = str(session.get("username", ""))
     session.permanent = False
     session.clear()
-    flash("You have been logged out.", "success")
-    return redirect(url_for("login"))
-
-
-# --------------------------------------------------------------------------
-# Recovery & external identity (Google) auth
-# --------------------------------------------------------------------------
-
-RESET_MAX_AGE = 7200  # 2 hours
-
-
-@app.route("/forgot-password", methods=["GET", "POST"])
-def forgot_password():
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-    if request.method == "POST":
-        if not _rate.allow(f"forgot:{_client_ip()}", 6, 3600):
-            flash("Too many reset requests from your address. Try again later.", "error")
-            return render_template("forgot_password.html")
-        email = request.form.get("email", "").strip()
-        user = _users.get_by_email(email)
-        # Generic response either way: never reveal whether an address is registered.
-        if user and _mailer.configured:
-            token = _reset_serializer.dumps(user["email"])
-            link = _absolute("reset_password", token=token)
-            threading.Thread(
-                target=_mailer.send_password_reset,
-                args=(user["email"], user["username"], link),
-                daemon=True,
-            ).start()
-        elif _mailer.configured:
-            log.info("forgot-password requested for unregistered address (ignored): %s", email)
-        flash("If that email is registered, a password reset link has been sent.", "info")
-        return render_template("forgot_password.html")
-    return render_template("forgot_password.html")
-
-
-@app.route("/reset-password/<token>", methods=["GET", "POST"])
-def reset_password(token):
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-    try:
-        email = _reset_serializer.loads(token, max_age=RESET_MAX_AGE)
-    except Exception:
-        flash("This reset link is invalid or has expired. Please request a new one.", "error")
-        return redirect(url_for("forgot_password"))
-    user = _users.get_by_email(email)
-    if user is None:
-        flash("This reset link is invalid or has expired. Please request a new one.", "error")
-        return redirect(url_for("forgot_password"))
-    if request.method == "POST":
-        if not _rate.allow(f"reset:{_client_ip()}", 6, 3600):
-            flash("Too many attempts. Try again later.", "error")
-            return render_template("reset_password.html", token=token)
-        new_password = request.form.get("password", "")
-        if not new_password or len(new_password) < 8:
-            flash("Password must be at least 8 characters.", "error")
-            return render_template("reset_password.html", token=token)
+    if uid and username.startswith("guest_"):
         try:
-            _users.set_password(user["id"], new_password)
-        except UserError as e:
-            flash(str(e), "error")
-            return render_template("reset_password.html", token=token)
-        flash("Password updated successfully. Sign in with your new password.", "success")
-        return redirect(url_for("login"))
-    return render_template("reset_password.html", token=token)
-
-
-@app.route("/auth/google", methods=["GET"])
-def google_login():
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-    if not oauth_google.configured():
-        flash("Google sign-in isn't configured yet. Use username + password instead.", "error")
-        return redirect(url_for("login"))
-    state = session.get("_csrf", secrets.token_hex(16))
-    session["_csrf"] = state
-    return redirect(google_auth_url(_absolute("google_callback"), state))
-
-
-@app.route("/auth/google/callback", methods=["GET"])
-def google_callback():
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-    state = request.args.get("state", "")
-    expected = session.get("_csrf", "")
-    if not state or state != expected:
-        flash("Invalid sign-in session. Please try again.", "error")
-        return redirect(url_for("login"))
-    code = request.args.get("code", "")
-    if not code:
-        flash("Google sign-in was cancelled or failed.", "error")
-        return redirect(url_for("login"))
-    access_token = oauth_google.exchange_code(code, _absolute("google_callback"))
-    info = oauth_google.userinfo(access_token) if access_token else None
-    if not info or not info.get("email_verified"):
-        flash("We couldn't verify your Google account. Please try again.", "error")
-        return redirect(url_for("login"))
-    user, _created = _users.register_oauth(info["email"], info.get("name"))
-    session["user_id"] = user["id"]
-    session["username"] = user["username"]
-    session.permanent = True
-    flash("Signed in with Google.", "success")
-    return redirect(url_for("dashboard"))
+            _users.delete_user(uid)
+        except Exception:
+            pass
+    flash("Started a fresh session.", "success")
+    return redirect(url_for("home"))
 
 
 # --------------------------------------------------------------------------
@@ -932,22 +700,9 @@ def admin_test_email():
 # --------------------------------------------------------------------------
 
 @app.route("/change-password", methods=["GET", "POST"])
-@login_required
 def change_password():
-    """Update the account password (requires the current one)."""
-    user = current_user()
-    if request.method == "POST":
-        try:
-            _users.change_password(
-                user["id"],
-                request.form.get("current_password", ""),
-                request.form.get("new_password", ""),
-            )
-        except UserError as e:
-            return _flash_and_redirect(str(e), endpoint="change_password")
-        flash("Password updated successfully.", "success")
-        return redirect(url_for("change_password"))
-    return render_template("change_password.html", user=user)
+    """Retired: accounts/passwords are gone — open the workspace instead."""
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/settings", methods=["GET", "POST"])
