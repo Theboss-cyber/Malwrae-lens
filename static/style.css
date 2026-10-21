@@ -1548,3 +1548,63 @@ body.ml-scrolled .topbar { box-shadow: var(--shadow-md); background: color-mix(i
   .app-main > section, .app-main > .stats-grid, .app-main > .results-main,
   .btn-primary:not(.no-glow) { animation: none !important; }
 }
+
+/* ==========================================================================
+   17. Device compatibility / small-screen hardening
+   Fixes horizontal overflow in the topbar and stat/upload layouts so Analyze
+   and every app page fit phones, tablets and small laptops.
+   ========================================================================== */
+
+/* Never let a wide child force the page to scroll sideways */
+html, body { max-width: 100%; overflow-x: hidden; }
+.app-shell { max-width: 100vw; overflow-x: hidden; }
+.app-main { min-width: 0; }
+.app-main img, .app-main table, .app-main pre { max-width: 100%; }
+.app-main pre { overflow-x: auto; }
+
+/* Make the topbar search shrinkable instead of pushing content off-screen */
+.topbar { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+.topbar-search { min-width: 0; flex: 1 1 120px; }
+.topbar-search input { min-width: 0; }
+.search-btn { white-space: nowrap; }
+
+/* Tablet: hide the search button label, then the search bar itself */
+@media (max-width: 900px) {
+  .search-btn { display: none; }
+  .topbar-search { padding: 0 8px 0 12px; }
+}
+
+@media (max-width: 760px) {
+  .topbar { gap: 8px; }
+  .topbar-search { display: none; }
+  .nav-profile-btn > span:not(.avatar) { display: none; }
+  .logo .logo-img { height: 30px; }
+}
+
+/* Phones: tighten paddings, stack the drop zone, keep tags wrapping */
+@media (max-width: 560px) {
+  .app-main { padding: 18px 14px 56px; }
+  .upload-wrap { max-width: 100%; }
+  .upload-card { padding: 1.15rem 1rem; }
+  .drop-zone { padding: 1.5rem 1rem; }
+  .drop-zone-content p { max-width: 100%; }
+  .selected-file { overflow-wrap: anywhere; word-break: break-word; }
+  .ext-badge { font-size: 0.68rem; padding: 3px 9px; }
+  .stat-number { font-size: clamp(1.4rem, 7vw, 2rem); }
+  .stats-grid.dashboard-stats { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .profile-header { flex-direction: column; text-align: center; }
+  .profile-avatar { margin: 0 auto; }
+  .avatar-upload-bar { justify-content: center; }
+}
+
+/* Very small phones */
+@media (max-width: 400px) {
+  .stats-grid.dashboard-stats { grid-template-columns: 1fr; }
+  .btn { padding: 0 18px; }
+}
+
+/* Touch devices: comfortable tap targets, no hover-only affordances */
+@media (hover: none), (pointer: coarse) {
+  .ext-badge, .tag-badge { padding: 5px 12px; }
+  .topbar-action { width: 46px; height: 46px; }
+}
