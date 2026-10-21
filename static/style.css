@@ -496,12 +496,15 @@ header.topbar {
 /* Sidebar */
 .sidebar {
   flex: none;
+  align-self: flex-start;
   position: sticky;
   top: var(--topbar-h);
   width: var(--sidebar-mini);
-  min-height: calc(100dvh - var(--topbar-h));
+  height: calc(100dvh - var(--topbar-h));
   max-height: calc(100dvh - var(--topbar-h));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   padding: 10px;
@@ -510,7 +513,7 @@ header.topbar {
   transition: width 0.3s ease, transform 0.3s ease;
   scrollbar-width: thin;
 }
-.side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1 0 auto; }
 .side-group { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; }
 .side-group + .side-group { border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .side-label {
@@ -584,8 +587,10 @@ header.topbar {
     z-index: 960;
     width: min(78vw, 320px);
     height: calc(100dvh - var(--topbar-h));
-    min-height: 0;
     max-height: calc(100dvh - var(--topbar-h));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     transform: translateX(-105%);
     box-shadow: 12px 0 40px rgba(2, 6, 23, 0.5);
   }
