@@ -17,7 +17,10 @@
         <main class="app-main results-main" id="main-content">
             <section class="profile-card" aria-label="Your profile">
                 <div class="profile-header">
-                    <div class="profile-avatar" aria-hidden="true">{{ (settings.display_name or user.username)[:1]|upper }}</div>
+                    <div class="profile-avatar" aria-hidden="true">
+                        <img class="avatar-img" src="{{ avatar_url(user) }}" alt="">
+                        {% if not user.avatar %}{{ (settings.display_name or user.username)[:1]|upper }}{% endif %}
+                    </div>
 
                     <div class="profile-info">
                         <p class="profile-kicker">Profile</p>
@@ -33,6 +36,9 @@
                         <p class="profile-meta">
                             <span>✉️ {{ user.email }}</span>
                             <span>🗓 Joined {{ user.created_at[:10] }}</span>
+                            {% if user.username and user.username.startswith('guest_') %}
+                                <span>⚡ Guest session</span>
+                            {% endif %}
                             {% if mailer_configured and not user.get('email_verified') %}
                                 <span class="profile-meta-warn">⚠️ Email not verified</span>
                             {% endif %}
@@ -41,8 +47,27 @@
 
                     <div class="profile-actions">
                         <a href="{{ url_for('settings') }}#profile-form" class="btn btn-secondary">Edit profile</a>
+                        {% if user.username and not user.username.startswith('guest_') %}
                         <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change password</a>
+                        {% else %}
+                        <a href="{{ url_for('reset_demo') }}" class="btn btn-secondary">Start fresh session</a>
+                        {% endif %}
                     </div>
+                </div>
+
+                <div class="avatar-upload-bar">
+                    <form method="post" action="{{ url_for('settings_avatar') }}" enctype="multipart/form-data" class="avatar-upload-form">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <input type="file" id="avatar" name="avatar" accept="image/png,image/jpeg,image/gif,image/webp" class="form-control-file" required>
+                        <button type="submit" class="btn btn-primary">🖼️ Upload picture</button>
+                    </form>
+                    {% if user.avatar %}
+                    <form method="post" action="{{ url_for('settings_avatar_remove') }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-secondary">Remove picture</button>
+                    </form>
+                    {% endif %}
+                    <span class="muted small">PNG / JPG / GIF / WEBP · max 3 MB</span>
                 </div>
             </section>
 

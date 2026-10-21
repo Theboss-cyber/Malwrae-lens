@@ -62,7 +62,10 @@
                         <tbody>
                             {% for u in users %}
                             <tr>
-                                <td class="mono">@{{ u.username }}</td>
+                                <td class="mono">
+                                    <span class="avatar-table" aria-hidden="true"><img class="avatar-img" src="{{ avatar_url(u) }}" alt=""></span>
+                                    @{{ u.username }}
+                                </td>
                                 <td class="muted">{{ u.email }}</td>
                                 <td class="muted">{{ u.created_at[:10] }}</td>
                                 <td>

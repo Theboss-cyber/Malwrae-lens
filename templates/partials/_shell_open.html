@@ -26,12 +26,13 @@
       </a>
       <div class="nav-profile">
         <button type="button" class="nav-link nav-profile-btn" title="Account menu" aria-haspopup="true" aria-expanded="false">
-          <span class="avatar">{{ session.get('username', '')[:1]|upper }}</span>
-          <span>{{ session.get('username', '') }}</span>&nbsp;▾
+          <span class="avatar"><img class="avatar-img" src="{{ top_avatar_url }}" alt=""></span>
+          <span>{{ session.get('username', 'guest') }}</span>&nbsp;▾
         </button>
         <div class="profile-menu">
           <a href="{{ url_for('change_password') }}" class="profile-item">🔑 Change Password</a>
           <a href="{{ url_for('settings') }}" class="profile-item">⚙️ Settings</a>
+          <a href="{{ url_for('reset_demo') }}" class="profile-item">🔄 Open in new session</a>
           <div class="profile-sep"></div>
           <form method="post" action="{{ url_for('logout') }}">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">

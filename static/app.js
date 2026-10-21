@@ -122,4 +122,46 @@
     if (profileForm) {
         profileForm.addEventListener('click', function (e) { e.stopPropagation(); });
     }
+
+    // --- Count-up animation for dashboard/admin stat numbers ---
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var statNums = document.querySelectorAll('.stat-number');
+    if (statNums.length && !reduceMotion && 'IntersectionObserver' in window) {
+        var animateCount = function (el) {
+            var raw = (el.textContent || '').trim();
+            var target = parseFloat(raw.replace(/[^0-9.\-]/g, ''));
+            if (isNaN(target)) return;
+            var decimals = (raw.split('.')[1] || '').length;
+            var start = null, dur = 700;
+            el.classList.add('ml-counting');
+            var stepFn = function (ts) {
+                if (start === null) start = ts;
+                var p = Math.min((ts - start) / dur, 1);
+                var eased = 1 - Math.pow(1 - p, 3);
+                var val = (target * eased).toFixed(decimals);
+                el.textContent = raw.replace(/[0-9]+(\.[0-9]+)?/, val);
+                if (p < 1) requestAnimationFrame(stepFn);
+                else { el.textContent = raw; el.classList.remove('ml-counting'); }
+            };
+            requestAnimationFrame(stepFn);
+        };
+        var cio = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) { animateCount(entry.target); cio.unobserve(entry.target); }
+            });
+        }, { threshold: 0.4 });
+        statNums.forEach(function (el) { cio.observe(el); });
+    }
+
+    // --- Topbar elevation shadow on scroll ---
+    var lastScrolled = false;
+    var onScroll = function () {
+        var scrolled = window.scrollY > 8;
+        if (scrolled !== lastScrolled) {
+            document.body.classList.toggle('ml-scrolled', scrolled);
+            lastScrolled = scrolled;
+        }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
 })();

@@ -189,15 +189,20 @@ def _inject_csrf_token():
 
 @app.context_processor
 def _inject_theme():
-    """Provide the user's chosen theme as a body class.
+    """Provide the user's chosen theme as a body class and their avatar URL.
 
     Light is the default (auto resolves to light); pick Dark in Settings.
     """
     user_id = session.get("user_id")
     theme = "auto"
+    top_avatar = url_for("static", filename="favicon.png")
     if user_id:
+        user_row = _users.get_user(user_id)
         theme = _users.get_settings(user_id).get("theme", "auto")
-    return {"body_class": "" if theme == "dark" else "theme-light"}
+        if user_row and user_row.get("avatar"):
+            top_avatar = url_for("static", filename="uploads/avatars/" + user_row["avatar"])
+    return {"body_class": "" if theme == "dark" else "theme-light",
+            "top_avatar_url": top_avatar}
 
 
 @app.context_processor
@@ -211,6 +216,16 @@ def _inject_admin():
 def _inject_google():
     """Expose whether Google sign-in is configured (shown on the login page)."""
     return {"google_configured": oauth_google.configured()}
+
+
+@app.template_global()
+def avatar_url(user):
+    """Resolve a user dict's avatar filename to a served URL (falls back to the
+    brand mark when no picture is uploaded)."""
+    av = (user or {}).get("avatar", "") if isinstance(user, dict) else ""
+    if av:
+        return url_for("static", filename="uploads/avatars/" + av)
+    return url_for("static", filename="favicon.png")
 
 
 def require_csrf(view):
@@ -264,12 +279,57 @@ def _flash_and_redirect(message, endpoint="login", category="error", **url_kwarg
     return redirect(url_for(endpoint, **url_kwargs))
 
 
+def _clear_guest_session():
+    """Drop a silent auto-provisioned guest session so a real login/signup
+    (or a test client) can take over cleanly."""
+    uid = session.get("user_id")
+    if uid and str(session.get("username", "")).startswith("guest_"):
+        session.permanent = False
+        session.clear()
+
+
+# Endpoints that must stay reachable without a session: the auth pages
+# themselves (kept for tests/back-compat), the homepage, and static assets.
+AUTH_PAGE_ENDPOINTS = {
+    "login", "signup", "forgot_password", "reset_password",
+    "verify_email", "resend_verification", "google_login",
+    "static", "home",
+}
+
+
+@app.before_request
+def _auto_guest():
+    """Silently give every visitor a working account — no sign-in, no
+    registration, nothing to get stuck on. Each browser/device gets its own
+    throwaway guest_* account (auto-verified) so reports/history are private.
+    Real logins still work: login/signup endpoints are exempt from this and
+    clear any guest session first."""
+    if request.endpoint in AUTH_PAGE_ENDPOINTS:
+        return
+    if "user_id" in session:
+        return
+    try:
+        stamp = secrets.token_hex(3)
+        guest_id = _users.register(
+            f"guest_{stamp}",
+            f"guest_{stamp}@demo.malwarelens",
+            secrets.token_hex(16),
+        )
+        _users.mark_verified(guest_id)
+    except UserError:
+        return
+    session["user_id"] = guest_id
+    session["username"] = f"guest_{stamp}"
+    session.permanent = True
+
+
 # --------------------------------------------------------------------------
 # Auth
 # --------------------------------------------------------------------------
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    _clear_guest_session()
     if "user_id" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
@@ -308,6 +368,7 @@ def signup():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    _clear_guest_session()
     if "user_id" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
@@ -341,6 +402,36 @@ def login():
     return render_template("auth.html", active="login",
                            mailer_configured=_mailer.configured,
                            next=request.args.get("next", ""))
+
+
+# --------------------------------------------------------------------------
+# Open demo access (no sign-in required)
+# --------------------------------------------------------------------------
+
+@app.route("/demo")
+def demo():
+    """One-click entry: guarantees a session then drops the visitor on the
+    dashboard. Handy as the single 'launch' link or landing CTA."""
+    if "user_id" not in session:
+        _auto_guest()
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/reset", methods=["GET", "POST"])
+def reset_demo():
+    """Start fresh: clear this browser's session (and its guest account) and
+    open a brand-new empty workspace."""
+    uid = session.get("user_id")
+    username = str(session.get("username", ""))
+    session.permanent = False
+    session.clear()
+    if uid and username.startswith("guest_"):
+        try:
+            _users.delete_user(uid)
+        except Exception:
+            pass
+    flash("Started a fresh session.", "success")
+    return redirect(url_for("home"))
 
 
 # --------------------------------------------------------------------------
@@ -388,6 +479,9 @@ def resend_verification():
 @app.route("/logout", methods=["POST"])
 @require_csrf
 def logout():
+    # Drop permanent-session flags first so the cleared session cookie is not
+    # re-issued with a 30-day expiry (defensive; prevents stale-login oddities).
+    session.permanent = False
     session.clear()
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
@@ -871,6 +965,77 @@ def settings():
         settings=_users.get_settings(user["id"]),
         mailer_configured=_mailer.configured,
     )
+
+
+AVATAR_EXTS = {"png", "jpg", "jpeg", "gif", "webp"}
+AVATAR_MAX_BYTES = 3 * 1024 * 1024
+
+
+def _avatar_folder():
+    folder = Path(app.root_path) / "static" / "uploads" / "avatars"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def _looks_like_image(blob):
+    return (
+        blob[:8] == b"\x89PNG\r\n\x1a\n"
+        or blob[:3] == b"\xff\xd8\xff"
+        or blob[:6] in (b"GIF87a", b"GIF89a")
+        or blob[:12] in (b"RIFF" + b"WEBP",)
+    )
+
+
+@app.route("/settings/avatar", methods=["POST"])
+@login_required
+@require_csrf
+def settings_avatar():
+    """Upload a profile picture (validated size/type, stored under static/)."""
+    user = current_user()
+    upload = request.files.get("avatar")
+    if not upload or not upload.filename:
+        return _flash_and_redirect("Choose an image to upload first.", endpoint="settings")
+    ext = upload.filename.rsplit(".", 1)[-1].lower() if "." in upload.filename else ""
+    if ext not in AVATAR_EXTS:
+        return _flash_and_redirect("Avatar must be a PNG, JPG, GIF or WebP image.",
+                                   endpoint="settings")
+    blob = upload.read()
+    if len(blob) > AVATAR_MAX_BYTES:
+        return _flash_and_redirect("Avatar is too large (max 3 MB).", endpoint="settings")
+    if not _looks_like_image(blob):
+        return _flash_and_redirect("That file doesn't look like a valid image.",
+                                   endpoint="settings")
+    folder = _avatar_folder()
+    filename = f"{user['id']}_{secrets.token_hex(6)}.{ext}"
+    (folder / filename).write_bytes(blob)
+    if user.get("avatar"):
+        old = folder / user["avatar"]
+        if old.exists():
+            try:
+                old.unlink()
+            except OSError:
+                pass
+    _users.set_avatar(user["id"], filename)
+    flash("Profile picture updated.", "success")
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/avatar/remove", methods=["POST"])
+@login_required
+@require_csrf
+def settings_avatar_remove():
+    """Remove the uploaded profile picture and revert to the default mark."""
+    user = current_user()
+    if user.get("avatar"):
+        old = _avatar_folder() / user["avatar"]
+        if old.exists():
+            try:
+                old.unlink()
+            except OSError:
+                pass
+        _users.set_avatar(user["id"], "")
+    flash("Profile picture removed.", "success")
+    return redirect(url_for("settings"))
 
 
 # --------------------------------------------------------------------------

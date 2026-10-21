@@ -204,6 +204,8 @@ class UserService:
                 # Existing accounts start as verified so nobody is locked out by
                 # the new requirement; only newly-created accounts must verify.
                 conn.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1")
+            if "avatar" not in user_cols:
+                conn.execute("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''")
             conn.commit()
         finally:
             conn.close()
@@ -274,12 +276,22 @@ class UserService:
         conn = self._conn()
         try:
             row = conn.execute(
-                "SELECT id, username, email, created_at, is_admin, email_verified FROM users WHERE id = ?",
+                "SELECT id, username, email, created_at, is_admin, email_verified, avatar"
+                " FROM users WHERE id = ?",
                 (user_id,),
             ).fetchone()
         finally:
             conn.close()
         return dict(row) if row else None
+
+    def set_avatar(self, user_id, filename):
+        """Store (or clear, with an empty string) the user's avatar filename."""
+        conn = self._conn()
+        try:
+            conn.execute("UPDATE users SET avatar = ? WHERE id = ?", (filename or "", user_id))
+            conn.commit()
+        finally:
+            conn.close()
 
     def get_by_email(self, email):
         """Fetch a user row by canonical (lowercased) email or None."""
@@ -461,7 +473,7 @@ class UserService:
         conn = self._conn()
         try:
             rows = conn.execute(
-                "SELECT u.id, u.username, u.email, u.created_at, u.is_admin,"
+                "SELECT u.id, u.username, u.email, u.created_at, u.is_admin, u.avatar,"
                 "  (SELECT COUNT(*) FROM support_messages t WHERE t.user_id = u.id)"
                 "     AS tickets,"
                 "  (SELECT COUNT(*) FROM communities c WHERE c.owner_id = u.id)"

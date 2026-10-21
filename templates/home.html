@@ -82,6 +82,7 @@ nav {
 }
 .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.5px; color: var(--txt); }
 .brand .logo-img { height: 34px; width: auto; display: block; flex: none; border-radius: 6px; }
+.brand .brand-name { font-size: 1.02rem; letter-spacing: 1.5px; }
 .brand .sig { color: var(--cyan); }
 .brand .cursor { display: inline-block; width: 8px; height: 18px; background: var(--cyan); margin-left: 4px; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
@@ -313,19 +314,14 @@ footer .sig { color: var(--violet); }
 
 <!-- ======================= NAV ======================= -->
 <nav aria-label="Primary">
-  <a class="brand" href="#hero">{% include 'partials/_logo.html' %}<span class="cursor"></span></a>
+  <a class="brand" href="{{ url_for('home') }}">{% include 'partials/_logo.html' %}<span class="brand-name">MALWARE<span class="sig">LENS</span></span><span class="cursor"></span></a>
   <button type="button" class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
   <div class="main-nav">
     <a class="nav-link" href="#tracks">[ tracks ]</a>
     <a class="nav-link" href="#info">[ intel ]</a>
     <a class="nav-link" href="#cta">[ deploy ]</a>
-    {% if user %}
     <a class="nav-link" href="{{ url_for('analyze') }}">🔬 Analyze</a>
     <a class="btn btn-primary" href="{{ url_for('dashboard') }}">📊 Dashboard</a>
-    {% else %}
-    <a class="nav-link" href="{{ url_for('login') }}">Sign In</a>
-    <a class="btn btn-primary" href="{{ url_for('signup') }}">Register</a>
-    {% endif %}
   </div>
 </nav>
 
@@ -343,13 +339,8 @@ footer .sig { color: var(--violet); }
         <strong>Hunt threats · Build skills · Join the grid.</strong> Your files are never executed.
       </p>
       <div class="hero-cta reveal" data-delay="200">
-        {% if user %}
         <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-ripple">🔬 ANALYZE A FILE →</a>
         <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-ripple">📊 MY DASHBOARD</a>
-        {% else %}
-        <a href="{{ url_for('signup') }}" class="btn btn-primary btn-ripple">Register &amp; Get Started</a>
-        <a href="{{ url_for('login') }}" class="btn btn-secondary btn-ripple">Sign In</a>
-        {% endif %}
       </div>
 
       <div class="hero-stats reveal" data-delay="280">
@@ -440,11 +431,7 @@ footer .sig { color: var(--violet); }
         <h2>READY TO <span>DEPLOY</span> YOUR ANALYSIS?</h2>
         <p>Create your analyst profile, upload your first sample, and get a verdict in seconds.</p>
         <div class="hero-cta">
-          {% if user %}
           <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-green btn-ripple">⚡ ANALYZE A FILE</a>
-          {% else %}
-          <a href="{{ url_for('signup') }}" class="btn btn-primary btn-green btn-ripple">⚡ INITIATE REGISTRATION</a>
-          {% endif %}
         </div>
         <div class="terminal-line">
           <b>analyst@malwarelens$</b> ./analyze --sample=suspect.exe

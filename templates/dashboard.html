@@ -15,11 +15,14 @@
         
 
         <main class="app-main results-main" id="main-content">
-            <section class="card">
-                <h2>Welcome back, {{ user.username }} 👋</h2>
-                <p class="subtitle">
-                    Account: {{ user.email }} · Joined {{ user.created_at[:10] }}
-                </p>
+            <section class="card dash-welcome">
+                <span class="dash-avatar" aria-hidden="true"><img class="avatar-img" src="{{ avatar_url(user) }}" alt=""></span>
+                <div>
+                    <h2>Welcome back, {{ user.username }} 👋</h2>
+                    <p class="subtitle">
+                        Account: {{ user.email }} · Joined {{ user.created_at[:10] }}
+                    </p>
+                </div>
             </section>
 
             <section class="stats-grid dashboard-stats">
