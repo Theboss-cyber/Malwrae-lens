@@ -200,6 +200,18 @@ def avatar_url(user):
     return url_for("static", filename="favicon.png")
 
 
+@app.template_global()
+def static_v(filename):
+    """Cache-busted static URL: appends the file's mtime so browsers/CDNs always
+    fetch the current asset after a deploy instead of a stale copy."""
+    try:
+        path = os.path.join(app.static_folder, filename)
+        v = int(os.path.getmtime(path))
+    except OSError:
+        v = 0
+    return url_for("static", filename=filename, v=v)
+
+
 def require_csrf(view):
     @wraps(view)
     def wrapped(*args, **kwargs):

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Sandbox | MalwareLens</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ static_v('style.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body class="{{ body_class }}">
@@ -68,6 +68,6 @@
 
         </div>
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="{{ static_v('app.js') }}"></script>
 </body>
 </html>
