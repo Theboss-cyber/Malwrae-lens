@@ -10,13 +10,9 @@
 <body class="{{ body_class }}">
     <a class="skip-link" href="#main-content">Skip to content</a>
     {% include 'partials/_shell_open.html' %}
-        
-
-        <p class="tagline"><a href="{{ url_for('home') }}" class="back-link">← Home</a> · Static Malware File Analyzer</p>
-
-        
 
         <main class="app-main analyze-main" id="main-content">
+            <p class="tagline"><a href="{{ url_for('home') }}" class="back-link">← Home</a> · Static Malware File Analyzer</p>
             <div class="upload-card upload-wrap">
                 <h2>Analyze a File</h2>
                 <p class="subtitle">Upload a file to check for suspicious indicators</p>

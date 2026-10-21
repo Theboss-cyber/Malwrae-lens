@@ -277,7 +277,13 @@ def _auto_guest():
     if request.endpoint in AUTH_PAGE_ENDPOINTS:
         return
     if "user_id" in session:
-        return
+        # The session may reference a user that no longer exists — e.g. after a
+        # restart on ephemeral storage (/tmp) wipes the DB. Re-provision so the
+        # visitor never lands on a 500 from a stale cookie.
+        if _users.get_user(session.get("user_id")):
+            return
+        session.permanent = False
+        session.clear()
     try:
         stamp = secrets.token_hex(3)
         guest_id = _users.register(
