@@ -321,7 +321,7 @@ footer .sig { color: var(--violet); }
     <a class="nav-link" href="#info">[ intel ]</a>
     <a class="nav-link" href="#cta">[ deploy ]</a>
     <a class="nav-link" href="{{ url_for('analyze') }}">🔬 Analyze</a>
-    <a class="btn btn-primary" href="{{ url_for('dashboard') }}">📊 Dashboard</a>
+    <a class="btn btn-primary" href="{{ url_for('dashboard') }}">Dashboard</a>
   </div>
 </nav>
 
@@ -340,7 +340,7 @@ footer .sig { color: var(--violet); }
       </p>
       <div class="hero-cta reveal" data-delay="200">
         <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-ripple">🔬 ANALYZE A FILE →</a>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-ripple">📊 MY DASHBOARD</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-ripple">MY DASHBOARD</a>
       </div>
 
       <div class="hero-stats reveal" data-delay="280">
@@ -365,7 +365,6 @@ footer .sig { color: var(--violet); }
           <div class="track-outer">
             <div class="track-card">
               <div class="track-top">
-                <span class="track-icon">🦠</span>
                 <span class="track-id">M-<b>01</b> // DETECT</span>
               </div>
               <h3>Static Malware Detection</h3>
@@ -379,7 +378,6 @@ footer .sig { color: var(--violet); }
           <div class="track-outer">
             <div class="track-card">
               <div class="track-top">
-                <span class="track-icon">🕵️</span>
                 <span class="track-id">M-<b>02</b> // INDICATORS</span>
               </div>
               <h3>Indicator Extraction</h3>
@@ -393,8 +391,7 @@ footer .sig { color: var(--violet); }
           <div class="track-outer">
             <div class="track-card">
               <div class="track-top">
-                <span class="track-icon">🧩</span>
-                <span class="track-id">M-<b>03</b> // BINARY</span>
+                <span class="track-id">M-<b>03</b> // INTERNALS</span>
               </div>
               <h3>Binary Internals</h3>
               <p>Parse PE, ELF and APK structures — sections, imports, security flags and Android permissions that matter.</p>
@@ -416,10 +413,10 @@ footer .sig { color: var(--violet); }
       </div>
 
       <div class="info-grid">
-        <div class="info-card reveal"><span class="ic">🚨</span><h3>Behavioral Signatures</h3><p>19 signature rules catch anti-debugging, keylogging, persistence and more — severity rated.</p><span class="tag">▪ 19 rules</span></div>
-        <div class="info-card reveal"><span class="ic">🧮</span><h3>Risk Scoring</h3><p>Every file earns a transparent automated verdict — green, orange or red — with clear reasoning.</p><span class="tag">▪ auto-scored</span></div>
-        <div class="info-card reveal"><span class="ic">🌐</span><h3>Threat Intelligence</h3><p>Cross-check hashes against VirusTotal, visualize indicator graphs and export HTML/JSON reports.</p><span class="tag">▪ VT + graph</span></div>
-        <div class="info-card reveal"><span class="ic">🔐</span><h3>Secure Tooling</h3><p>AES-256-GCM encryption alongside analysis, so incident artifacts stay confidential end-to-end.</p><span class="tag">▪ AES-256</span></div>
+        <div class="info-card reveal"><h3>Behavioral Signatures</h3><p>19 signature rules catch anti-debugging, keylogging, persistence and more — severity rated.</p><span class="tag">19 rules</span></div>
+        <div class="info-card reveal"><h3>Risk Scoring</h3><p>Every file earns a transparent automated verdict — green, orange or red — with clear reasoning.</p><span class="tag">auto-scored</span></div>
+        <div class="info-card reveal"><h3>Threat Intelligence</h3><p>Cross-check hashes against VirusTotal, visualize indicator graphs and export HTML/JSON reports.</p><span class="tag">VT + graph</span></div>
+        <div class="info-card reveal"><h3>Secure Tooling</h3><p>AES-256-GCM encryption alongside analysis, so incident artifacts stay confidential end-to-end.</p><span class="tag">AES-256</span></div>
       </div>
     </div>
   </section>
@@ -431,7 +428,7 @@ footer .sig { color: var(--violet); }
         <h2>READY TO <span>DEPLOY</span> YOUR ANALYSIS?</h2>
         <p>Create your analyst profile, upload your first sample, and get a verdict in seconds.</p>
         <div class="hero-cta">
-          <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-green btn-ripple">⚡ ANALYZE A FILE</a>
+          <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-green btn-ripple">ANALYZE A FILE</a>
         </div>
         <div class="terminal-line">
           <b>analyst@malwarelens$</b> ./analyze --sample=suspect.exe

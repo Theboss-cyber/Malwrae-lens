@@ -16,7 +16,7 @@
 
         <main class="app-main results-main" id="main-content">
             <section class="card">
-                <h2>📊 This Week's Threat Digest <span class="phase-badge">Phase 7</span></h2>
+                <h2>This Week's Threat Digest <span class="phase-badge">Phase 7</span></h2>
                 <p class="subtitle">Community verdict activity over the last 7 days alongside your personal alerts.</p>
                 <div class="digest-grid">
                     <div class="digest-item"><span class="digest-num">{{ digest.total_verdicts }}</span><span class="digest-label">Shared verdicts (7d)</span></div>
@@ -47,7 +47,7 @@
 
             <div class="dash-cols">
                 <div class="card">
-                    <h2>🔔 Alerts
+                    <h2>Alerts
                         {% if unread %}<span class="unread-badge">{{ unread }} new</span>{% endif %}
                     </h2>
                     {% if alerts %}
@@ -69,7 +69,7 @@
                 </div>
 
                 <div class="card">
-                    <h2>🎯 Watchlist</h2>
+                    <h2>Watchlist</h2>
                     <p class="muted small">Get an alert whenever a hash you track is shared in any community.</p>
                     <form method="post" action="{{ url_for('watch_add') }}" class="settings-form">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
@@ -77,7 +77,7 @@
                         <input class="form-input" type="text" id="wlabel" name="label" maxlength="40" placeholder="e.g. APT-44 loader" required>
                         <label class="form-label" for="wsha">SHA-256</label>
                         <input class="form-input mono" type="text" id="wsha" name="sha256" pattern="[0-9a-fA-F]{64}" maxlength="64" placeholder="64-character hex hash" required>
-                        <button type="submit" class="btn btn-primary">➕ Add to watchlist</button>
+                        <button type="submit" class="btn btn-primary">Add to watchlist</button>
                     </form>
                     {% if watchlist %}
                     <ul class="alert-list" style="margin-top:14px">
@@ -96,12 +96,12 @@
             </div>
 
             <section class="card">
-                <h2>📡 Live Feed</h2>
+                <h2>Live Feed</h2>
                 {% if feed %}
                 <ul class="feed-list">
                     {% for e in feed %}
                     <li class="feed-item">
-                        <span class="feed-icon">{{ verb_icons.get(e.verb, '📌') }}</span>
+                            <span class="feed-icon">{{ verb_icons.get(e.verb) }}</span>
                         <span class="feed-body">
                             <strong>{{ e.username }}</strong>
                             {{ e.verb.replace('_', ' ') }}

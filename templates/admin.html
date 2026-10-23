@@ -16,7 +16,7 @@
 
         <main class="app-main results-main" id="main-content">
             <section class="card">
-                <h2>⚙️ Admin Panel</h2>
+                <h2>Admin Panel</h2>
                 <p class="subtitle">Site operations &amp; account management · signed in as {{ user.username }}</p>
             </section>
 
@@ -44,7 +44,7 @@
             </section>
 
             <section class="card">
-                <h2>👥 Users</h2>
+                <h2>Users</h2>
                 {% if users %}
                 <div class="history-table-wrap">
                     <table class="history-table">
@@ -110,7 +110,7 @@
             </section>
 
             <section class="card">
-                <h2>🕐 Recent Reports</h2>
+                <h2>Recent Reports</h2>
                 {% if reports %}
                 <div class="history-table-wrap">
                     <table class="history-table">
@@ -152,7 +152,7 @@
             </section>
 
             <section class="card">
-                <h2>🎫 Support Tickets</h2>
+                <h2>Support Tickets</h2>
                 {% if tickets %}
                 <ul class="ticket-list">
                     {% for t in tickets %}
@@ -181,7 +181,7 @@
                 {% endif %}
             </section>
         <section class="card">
-                <h2>📧 Email / SMTP</h2>
+                <h2>Email / SMTP</h2>
                 <p class="ticket-meta">
                     Sends a real test message and shows the exact result (including
                     the SMTP server error) so you can verify verification/reset emails deliver.

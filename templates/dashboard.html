@@ -18,7 +18,7 @@
             <section class="card dash-welcome">
                 <span class="dash-avatar" aria-hidden="true"><img class="avatar-img" src="{{ avatar_url(user) }}" alt=""></span>
                 <div>
-                    <h2>Welcome back, {{ user.username }} 👋</h2>
+                    <h2>Welcome back, {{ user.username }}</h2>
                     <p class="subtitle">
                         Account: {{ user.email }} · Joined {{ user.created_at[:10] }}
                     </p>
@@ -54,7 +54,7 @@
 
             <div class="dash-cols">
                 <div class="card">
-                    <h2>🕐 Recent Analyses</h2>
+                    <h2>Recent Analyses</h2>
                     {% if summaries %}
                     <div class="history-table-wrap">
                         <table class="history-table">
@@ -101,37 +101,31 @@
                 </div>
 
                 <div class="card">
-                    <h2>🚀 Quick Actions</h2>
+                    <h2>Quick Actions</h2>
                     <div class="quick-actions">
                         <a href="{{ url_for('analyze') }}" class="quick-link">
-                            <span class="quick-icon">🔬</span>
                             <span><strong>Analyze a file</strong><br><small>Upload a suspicious sample</small></span>
                         </a>
                         <a href="{{ url_for('crypto') }}" class="quick-link">
-                            <span class="quick-icon">🔐</span>
                             <span><strong>Encrypt a file</strong><br><small>AES-256-GCM protection</small></span>
                         </a>
                         <a href="{{ url_for('history') }}" class="quick-link">
-                            <span class="quick-icon">📋</span>
                             <span><strong>View reports</strong><br><small>Revisit past analyses</small></span>
                         </a>
                         <a href="{{ url_for('contact') }}" class="quick-link">
-                            <span class="quick-icon">🆘</span>
                             <span><strong>Get support</strong><br><small>Talk to the team</small></span>
                         </a>
                         <a href="{{ url_for('sandbox') }}" class="quick-link">
-                            <span class="quick-icon">🏘️</span>
                             <span><strong>Cloud Sandbox</strong><br><small>Triage verdicts as a team</small></span>
                         </a>
                         <a href="{{ url_for('live') }}" class="quick-link">
-                            <span class="quick-icon">🔔</span>
                             <span><strong>Live Feed</strong><br><small>Alerts, watchlists &amp; digest</small></span>
                         </a>
                     </div>
 
                     {% if stats.riskiest %}
                     <div class="warning" style="margin-top:18px">
-                        <strong>⚠️ Riskiest file:</strong>
+                        <strong>Riskiest file:</strong>
                         {{ stats.riskiest.filename }} (score {{ stats.riskiest.risk_score }}/100 · {{ stats.riskiest.risk_level }})
                     </div>
                     {% endif %}
